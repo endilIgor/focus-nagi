@@ -101,7 +101,11 @@ public class AnalyticsService {
   @Transactional(readOnly = true)
   public List<DayFocusResponse> heatmap(LocalDate from, LocalDate to) {
     LocalDate[] range = requireValidRange(from, to, MAX_HEATMAP_DAYS);
-    return focusSessionRepository.dailyFocus(range[0], range[1], zoneId.getId()).stream()
+    Instant fromInstant = range[0].atStartOfDay(zoneId).toInstant();
+    Instant toInstant = range[1].plusDays(1).atStartOfDay(zoneId).toInstant();
+    return focusSessionRepository
+        .dailyFocus(range[0], range[1], fromInstant, toInstant, zoneId.getId())
+        .stream()
         .map(row -> new DayFocusResponse(row.getDay(), row.getSeconds() / 60))
         .toList();
   }
@@ -118,7 +122,9 @@ public class AnalyticsService {
     LocalDate end = to == null ? today() : to;
     LocalDate start = from == null ? end.minusDays(83) : from;
     requireValidRange(start, end, 372);
-    return focusSessionRepository.weeklyFocus(start, end, zoneId.getId()).stream()
+    Instant fromInstant = start.atStartOfDay(zoneId).toInstant();
+    Instant toInstant = end.plusDays(1).atStartOfDay(zoneId).toInstant();
+    return focusSessionRepository.weeklyFocus(fromInstant, toInstant, zoneId.getId()).stream()
         .map(row -> new WeekFocusResponse(row.getWeekStart(), row.getSeconds() / 60))
         .toList();
   }
@@ -128,7 +134,9 @@ public class AnalyticsService {
     LocalDate end = to == null ? today() : to;
     LocalDate start = from == null ? end.minusMonths(12) : from;
     requireValidRange(start, end, 366 * 5);
-    return focusSessionRepository.monthlyFocus(start, end, zoneId.getId()).stream()
+    Instant fromInstant = start.atStartOfDay(zoneId).toInstant();
+    Instant toInstant = end.plusDays(1).atStartOfDay(zoneId).toInstant();
+    return focusSessionRepository.monthlyFocus(fromInstant, toInstant, zoneId.getId()).stream()
         .map(row -> new MonthFocusResponse(row.getMonth(), row.getSeconds() / 60))
         .toList();
   }

@@ -72,6 +72,7 @@ public interface FocusSessionRepository
           FROM generate_series(CAST(:from AS date), CAST(:to AS date), INTERVAL '1 day') AS d(day)
           LEFT JOIN focus_session f
             ON f.status = 'COMPLETED'
+           AND f.started_at >= :fromInstant AND f.started_at < :toInstant
            AND (f.started_at AT TIME ZONE CAST(:zone AS text))::date = d.day::date
           GROUP BY d.day
           ORDER BY d.day
@@ -80,6 +81,8 @@ public interface FocusSessionRepository
   List<DailyFocusRow> dailyFocus(
       @Param("from") java.time.LocalDate from,
       @Param("to") java.time.LocalDate to,
+      @Param("fromInstant") Instant fromInstant,
+      @Param("toInstant") Instant toInstant,
       @Param("zone") String zone);
 
   @Query(
@@ -100,15 +103,14 @@ public interface FocusSessionRepository
                  SUM(f.actual_focus_seconds) AS seconds
           FROM focus_session f
           WHERE f.status = 'COMPLETED'
-            AND (f.started_at AT TIME ZONE CAST(:zone AS text))::date
-                BETWEEN CAST(:from AS date) AND CAST(:to AS date)
+            AND f.started_at >= :fromInstant AND f.started_at < :toInstant
           GROUP BY 1
           ORDER BY 1
           """,
       nativeQuery = true)
   List<WeekFocusRow> weeklyFocus(
-      @Param("from") java.time.LocalDate from,
-      @Param("to") java.time.LocalDate to,
+      @Param("fromInstant") Instant fromInstant,
+      @Param("toInstant") Instant toInstant,
       @Param("zone") String zone);
 
   @Query(
@@ -118,15 +120,14 @@ public interface FocusSessionRepository
                  SUM(f.actual_focus_seconds) AS seconds
           FROM focus_session f
           WHERE f.status = 'COMPLETED'
-            AND (f.started_at AT TIME ZONE CAST(:zone AS text))::date
-                BETWEEN CAST(:from AS date) AND CAST(:to AS date)
+            AND f.started_at >= :fromInstant AND f.started_at < :toInstant
           GROUP BY 1
           ORDER BY 1
           """,
       nativeQuery = true)
   List<MonthFocusRow> monthlyFocus(
-      @Param("from") java.time.LocalDate from,
-      @Param("to") java.time.LocalDate to,
+      @Param("fromInstant") Instant fromInstant,
+      @Param("toInstant") Instant toInstant,
       @Param("zone") String zone);
 
   @Query(

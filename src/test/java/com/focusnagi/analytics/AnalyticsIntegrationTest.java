@@ -199,6 +199,43 @@ class AnalyticsIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldExcludeSessionsOutsideTheRequestedRangeBoundaries() throws Exception {
+      LocalDate today = LocalDate.now(ZoneOffset.UTC);
+      // Just before and just after the [from, to] window, to catch off-by-one errors in the
+      // sargable started_at bounds used to filter these queries.
+      completedSessionAt(today.minusDays(3).atTime(23, 59).toInstant(ZoneOffset.UTC), 90, null);
+      completedSessionAt(today.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC), 90, null);
+      completedSessionAt(todayAt(12), 20, null);
+
+      mvc.perform(
+              get("/api/analytics/focus/by-day")
+                  .with(asOwner())
+                  .param("from", today.minusDays(2).toString())
+                  .param("to", today.toString()))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.length()").value(3))
+          .andExpect(jsonPath("$[0].focusedMinutes").value(0))
+          .andExpect(jsonPath("$[1].focusedMinutes").value(0))
+          .andExpect(jsonPath("$[2].focusedMinutes").value(20));
+
+      mvc.perform(
+              get("/api/analytics/focus/by-week")
+                  .with(asOwner())
+                  .param("from", today.minusDays(2).toString())
+                  .param("to", today.toString()))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$[0].focusedMinutes").value(20));
+
+      mvc.perform(
+              get("/api/analytics/focus/by-month")
+                  .with(asOwner())
+                  .param("from", today.minusDays(2).toString())
+                  .param("to", today.toString()))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$[0].focusedMinutes").value(20));
+    }
+
+    @Test
     void shouldReturnFocusByHour() throws Exception {
       completedSessionAt(todayAt(14), 30, null);
 

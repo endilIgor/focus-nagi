@@ -1,0 +1,8 @@
+# Development conveniences. Production runs with the default profile plus env vars.
+app:
+  owner:
+    password: ${APP_OWNER_PASSWORD:dev-password-only}
+
+logging:
+  level:
+    com.focusnagi: DEBUG

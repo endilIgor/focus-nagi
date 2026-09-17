@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -56,6 +57,10 @@ public class FocusSession {
 
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
+
+  @Version
+  @Column(nullable = false)
+  private int version;
 
   protected FocusSession() {}
 

@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -117,28 +118,39 @@ public class FocusSessionService {
   public FocusSessionResponse pause(long id) {
     FocusSession session = find(id);
     session.pause(clock.instant());
-    return FocusSessionResponse.from(focusSessionRepository.save(session));
+    return FocusSessionResponse.from(saveWithConflictMapping(session));
   }
 
   @Transactional
   public FocusSessionResponse resume(long id) {
     FocusSession session = find(id);
     session.resume(clock.instant());
-    return FocusSessionResponse.from(focusSessionRepository.save(session));
+    return FocusSessionResponse.from(saveWithConflictMapping(session));
   }
 
   @Transactional
   public FocusSessionResponse finish(long id) {
     FocusSession session = find(id);
     session.finish(clock.instant());
-    return FocusSessionResponse.from(focusSessionRepository.save(session));
+    return FocusSessionResponse.from(saveWithConflictMapping(session));
   }
 
   @Transactional
   public FocusSessionResponse cancel(long id) {
     FocusSession session = find(id);
     session.cancel(clock.instant());
-    return FocusSessionResponse.from(focusSessionRepository.save(session));
+    return FocusSessionResponse.from(saveWithConflictMapping(session));
+  }
+
+  private FocusSession saveWithConflictMapping(FocusSession session) {
+    try {
+      return focusSessionRepository.saveAndFlush(session);
+    } catch (ObjectOptimisticLockingFailureException ex) {
+      // Concurrency backstop: another transaction already moved this session's state.
+      throw DomainException.conflict(
+          "FOCUS_SESSION_CONCURRENT_MODIFICATION",
+          "The focus session was modified concurrently. Reload and try again.");
+    }
   }
 
   @Transactional(readOnly = true)

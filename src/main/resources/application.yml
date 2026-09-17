@@ -39,6 +39,8 @@ app:
   time-zone: ${APP_TIME_ZONE:UTC}
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}
+  swagger:
+    enabled: ${APP_SWAGGER_ENABLED:false}
   owner:
     username: ${APP_OWNER_USERNAME:owner}
     password: ${APP_OWNER_PASSWORD:}

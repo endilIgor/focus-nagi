@@ -5,6 +5,7 @@ import type { AnalyticsPeriod } from "../api/types";
 import { formatMinutesAsHm } from "../hooks/useClock";
 import { useTheme } from "../theme/ThemeContext";
 import { getTints } from "../theme/themes";
+import { fillHourlyFocus } from "../utils/analytics";
 import { addDaysIso, todayIso, weekdayLabel } from "../utils/date";
 import { describeApiError } from "../utils/errors";
 import styles from "./AnalyticsPage.module.css";
@@ -48,7 +49,7 @@ export function AnalyticsPage() {
   const byDay = byDayQuery.data ?? [];
   const dayMax = Math.max(60, ...byDay.map((d) => d.focusedMinutes));
 
-  const byHour = byHourQuery.data ?? [];
+  const byHour = fillHourlyFocus(byHourQuery.data ?? []);
   const hourMax = Math.max(1, ...byHour.map((h) => h.focusedMinutes));
 
   const byProject = byProjectQuery.data ?? [];
@@ -57,7 +58,8 @@ export function AnalyticsPage() {
   const byWeek = byWeekQuery.data ?? [];
   const weekMax = Math.max(1, ...byWeek.map((w) => w.focusedMinutes));
 
-  const bestHour = byHour.length ? byHour.reduce((a, b) => (b.focusedMinutes > a.focusedMinutes ? b : a)) : null;
+  const bestHourCandidate = byHour.reduce((a, b) => (b.focusedMinutes > a.focusedMinutes ? b : a));
+  const bestHour = bestHourCandidate.focusedMinutes > 0 ? bestHourCandidate : null;
 
   return (
     <div>

@@ -21,11 +21,15 @@ public interface FocusSessionRepository
 
   @Query(
       "select coalesce(sum(f.actualFocusSeconds), 0) from FocusSession f"
-          + " where f.status = 'COMPLETED' and f.startedAt >= :from and f.startedAt < :to")
-  long sumFocusSecondsBetween(@Param("from") Instant from, @Param("to") Instant to);
+          + " where f.status = 'COMPLETED' and f.startedAt >= :from and f.startedAt < :to"
+          + " and (:projectId is null or f.projectId = :projectId)")
+  long sumFocusSecondsBetween(
+      @Param("from") Instant from, @Param("to") Instant to, @Param("projectId") Long projectId);
 
   @Query(
       "select count(f) from FocusSession f"
-          + " where f.status = 'COMPLETED' and f.startedAt >= :from and f.startedAt < :to")
-  long countCompletedBetween(@Param("from") Instant from, @Param("to") Instant to);
+          + " where f.status = 'COMPLETED' and f.startedAt >= :from and f.startedAt < :to"
+          + " and (:projectId is null or f.projectId = :projectId)")
+  long countCompletedBetween(
+      @Param("from") Instant from, @Param("to") Instant to, @Param("projectId") Long projectId);
 }

@@ -32,7 +32,7 @@ JPA); agregações no banco (SQL nativo com `AT TIME ZONE` para os buckets de an
 ## Executar
 
 ```bash
-cp .env.example .env   # preencha APP_OWNER_PASSWORD
+cp .env.example .env   # preencha APP_OWNER_PASSWORD e POSTGRES_PASSWORD
 docker compose up --build
 ```
 
@@ -61,6 +61,8 @@ APP_OWNER_PASSWORD=dev-secret ./mvnw spring-boot:run -Dspring-boot.run.profiles=
 |---|---|---|
 | `APP_OWNER_PASSWORD` | (vazio; obrigatória no primeiro boot) | senha inicial do owner (seed idempotente, BCrypt) |
 | `APP_OWNER_USERNAME` | `owner` | username do owner |
+| `POSTGRES_DB/USER/PASSWORD` | `focusnagi` / `focusnagi` / `focusnagi` | banco criado pelo Docker Compose; use senha forte fora do desenvolvimento local |
+| `POSTGRES_PORT` | `5432` | porta PostgreSQL publicada pelo Docker Compose |
 | `APP_DATABASE_URL/USER/PASSWORD` | `jdbc:postgresql://localhost:5432/focusnagi` / `focusnagi` | datasource |
 | `APP_TIME_ZONE` | `UTC` | timezone dos limites de dia/semana/mês (analytics, metas, diário) |
 | `APP_CORS_ALLOWED_ORIGINS` | vazio (mesma origem) | origins separadas por vírgula; nunca combinado com wildcard+credentials |
@@ -124,3 +126,5 @@ filtros e analytics) vivem no SQL.
 - Rate limiting de login é em memória e por instância (não distribuído).
 - Sessões são in-memory (suficiente para uso single-user; reiniciar o servidor desloga).
 - Sem HTTPS embutido: termine TLS no proxy reverso e use `APP_COOKIE_SECURE=true`.
+- Em produção, defina valores aleatórios para `APP_OWNER_PASSWORD` e `POSTGRES_PASSWORD`; os
+  defaults previsíveis do Compose existem somente para facilitar desenvolvimento local.

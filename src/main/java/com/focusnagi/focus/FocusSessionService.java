@@ -65,15 +65,6 @@ public class FocusSessionService {
   }
 
   @Transactional(readOnly = true)
-  public FocusSessionResponse current() {
-    return focusSessionRepository.findAll(activeSpec()).stream()
-        .findFirst()
-        .map(FocusSessionResponse::from)
-        .orElseThrow(
-            () -> DomainException.notFound("FOCUS_SESSION_NOT_FOUND", "No active focus session."));
-  }
-
-  @Transactional(readOnly = true)
   public FocusSessionResponse currentOrNull() {
     return focusSessionRepository.findAll(activeSpec()).stream()
         .findFirst()

@@ -1,5 +1,7 @@
 package com.focusnagi.project;
 
+import com.focusnagi.focus.FocusSessionService;
+import com.focusnagi.focus.ProjectFocusResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -18,9 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProjectController {
 
   private final ProjectService projectService;
+  private final FocusSessionService focusSessionService;
 
-  public ProjectController(ProjectService projectService) {
+  public ProjectController(ProjectService projectService, FocusSessionService focusSessionService) {
     this.projectService = projectService;
+    this.focusSessionService = focusSessionService;
   }
 
   @PostMapping
@@ -60,5 +64,10 @@ public class ProjectController {
   @PostMapping("/{id}/restore")
   ProjectResponse restore(@PathVariable long id) {
     return projectService.restore(id);
+  }
+
+  @GetMapping("/{id}/focus")
+  ProjectFocusResponse focus(@PathVariable long id) {
+    return focusSessionService.projectFocus(id);
   }
 }

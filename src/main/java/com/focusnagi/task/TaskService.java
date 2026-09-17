@@ -19,16 +19,19 @@ public class TaskService {
   private final TaskRepository taskRepository;
   private final SubtaskRepository subtaskRepository;
   private final ProjectRepository projectRepository;
+  private final com.focusnagi.focus.FocusSessionRepository focusSessionRepository;
   private final Clock clock;
 
   public TaskService(
       TaskRepository taskRepository,
       SubtaskRepository subtaskRepository,
       ProjectRepository projectRepository,
+      com.focusnagi.focus.FocusSessionRepository focusSessionRepository,
       Clock clock) {
     this.taskRepository = taskRepository;
     this.subtaskRepository = subtaskRepository;
     this.projectRepository = projectRepository;
+    this.focusSessionRepository = focusSessionRepository;
     this.clock = clock;
   }
 
@@ -128,6 +131,11 @@ public class TaskService {
   @Transactional
   public void delete(long id) {
     Task task = find(id);
+    if (focusSessionRepository.existsByTaskId(id)) {
+      throw DomainException.conflict(
+          "TASK_HAS_FOCUS_SESSIONS",
+          "Task has focus sessions and cannot be deleted. Cancel it instead.");
+    }
     taskRepository.delete(task);
   }
 

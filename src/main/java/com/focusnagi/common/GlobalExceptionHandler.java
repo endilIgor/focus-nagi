@@ -23,8 +23,7 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(DomainException.class)
   ResponseEntity<ApiError> handleDomain(DomainException ex) {
-    return ResponseEntity.status(ex.status())
-        .body(ApiError.of(ex.code(), ex.getMessage()));
+    return ResponseEntity.status(ex.status()).body(ApiError.of(ex.code(), ex.getMessage()));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -52,7 +51,10 @@ public class GlobalExceptionHandler {
     return badRequest("VALIDATION_ERROR", "Invalid request parameters.");
   }
 
-  @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+  @ExceptionHandler({
+    HttpMessageNotReadableException.class,
+    MethodArgumentTypeMismatchException.class
+  })
   ResponseEntity<ApiError> handleMalformed(Exception ex) {
     return badRequest("MALFORMED_REQUEST", "Malformed request.");
   }

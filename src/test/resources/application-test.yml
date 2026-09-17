@@ -1,6 +1,4 @@
 spring:
-  datasource:
-    url: jdbc:tc:postgresql:16-alpine:///focusnagi
   jpa:
     hibernate:
       ddl-auto: validate
@@ -11,6 +9,8 @@ app:
   owner:
     username: owner
     password: test-password
+  swagger:
+    enabled: true
 
 logging:
   level:

@@ -28,11 +28,21 @@ public class TimeConfig {
   }
 
   @ConfigurationProperties("app")
-  public record AppProperties(String timeZone) {
+  public record AppProperties(String timeZone, Cors cors, Swagger swagger) {
     public AppProperties {
       if (timeZone == null || timeZone.isBlank()) {
         timeZone = "UTC";
       }
+      if (cors == null) {
+        cors = new Cors("");
+      }
+      if (swagger == null) {
+        swagger = new Swagger(false);
+      }
     }
+
+    public record Cors(String allowedOrigins) {}
+
+    public record Swagger(boolean enabled) {}
   }
 }

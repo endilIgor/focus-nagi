@@ -2,6 +2,8 @@
 app:
   owner:
     password: ${APP_OWNER_PASSWORD:dev-password-only}
+  swagger:
+    enabled: true
 
 logging:
   level:

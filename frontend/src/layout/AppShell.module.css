@@ -1,0 +1,203 @@
+.header {
+  border-bottom: 1px solid var(--hairline);
+  background: rgba(6, 6, 10, 0.8);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.headerInner {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 13px 30px 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 16px;
+  row-gap: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.logo {
+  width: 32px;
+  height: 32px;
+  background: var(--acc);
+  display: grid;
+  place-items: center;
+  font: 700 12px "JetBrains Mono", monospace;
+  color: #07070c;
+  box-shadow: 0 0 20px var(--glow);
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%);
+}
+.brandTitle {
+  font: 700 16px "Chakra Petch", sans-serif;
+  letter-spacing: 0.2em;
+}
+.brandTitle span {
+  color: var(--acc2);
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.03);
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: fnPulse 1.8s ease-in-out infinite;
+}
+.pillLabel {
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.18em;
+  color: var(--text-mute);
+}
+.pillValue {
+  font: 700 13px "JetBrains Mono", monospace;
+  color: var(--text);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.palettes {
+  display: flex;
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.03);
+}
+.swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  padding: 0;
+}
+.swatch.active {
+  border-color: #fff;
+}
+
+.streak {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--hairline);
+  background: rgba(255, 255, 255, 0.03);
+}
+.streakLabel {
+  font: 400 9px "JetBrains Mono", monospace;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+}
+.streakValue {
+  font: 700 15px "JetBrains Mono", monospace;
+  color: var(--acc);
+}
+.spark {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 14px;
+}
+.sparkBar {
+  width: 3px;
+}
+
+.logoutBtn {
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--text-mute);
+  padding: 9px 12px;
+  font: 500 9px "JetBrains Mono", monospace;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+}
+.logoutBtn:hover {
+  border-color: rgba(244, 63, 94, 0.5);
+  color: #ff8098;
+}
+.logoutError {
+  position: absolute;
+  top: 62px;
+  right: 0;
+  max-width: 320px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 128, 152, 0.45);
+  background: rgba(20, 10, 18, 0.96);
+  color: #ff8098;
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.04em;
+  z-index: 20;
+}
+
+.nav {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 0 30px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 11px;
+}
+.navItem {
+  position: relative;
+  background: transparent;
+  border: none;
+  color: var(--text-mute);
+  padding: 13px 17px;
+  font: 600 12px "Chakra Petch", sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+.navItem:hover {
+  color: var(--text-bright);
+}
+.navItem.active {
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text-bright);
+}
+.navLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: transparent;
+}
+.navItem.active .navLine {
+  background: var(--acc);
+  box-shadow: 0 0 12px var(--acc);
+}
+
+.main {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 28px 30px 80px;
+  position: relative;
+}
+
+@media (max-width: 720px) {
+  .headerInner { padding: 10px 16px 0; column-gap: 10px; }
+  .brandTitle { font-size: 14px; }
+  .spacer, .streak { display: none; }
+  .nav { padding: 0 16px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+  .navItem { flex: none; padding: 11px 13px; font-size: 11px; }
+  .main { padding: 22px 16px 64px; }
+  .logoutError { top: 54px; right: 16px; left: 16px; max-width: none; }
+}

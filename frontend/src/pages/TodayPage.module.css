@@ -1,0 +1,328 @@
+.headRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.dateBlock {
+  text-align: right;
+  font: 400 11px "JetBrains Mono", monospace;
+  color: var(--text-faint);
+  letter-spacing: 0.14em;
+  line-height: 1.9;
+}
+.dateBlock .today {
+  color: #d8d4e6;
+}
+
+.hero {
+  position: relative;
+  border: 1px solid var(--hairline);
+  background: linear-gradient(
+    120deg,
+    var(--soft),
+    rgba(255, 255, 255, 0.035) 34%,
+    rgba(255, 255, 255, 0.008)
+  );
+  backdrop-filter: blur(12px);
+  padding: 26px 28px;
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: center;
+  overflow: hidden;
+}
+.heroGlow {
+  position: absolute;
+  right: -90px;
+  top: -120px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: var(--glow);
+  filter: blur(42px);
+  animation: fnBreathe 7s ease-in-out infinite;
+}
+.miniClock {
+  font: 700 27px "JetBrains Mono", monospace;
+}
+.miniSub {
+  font: 400 8px "JetBrains Mono", monospace;
+  letter-spacing: 0.24em;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.sessionHead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.sessionBadge {
+  font: 500 9px "JetBrains Mono", monospace;
+  letter-spacing: 0.16em;
+  padding: 3px 8px;
+  border: 1px solid;
+}
+.sessionTitle {
+  font: 600 25px "Chakra Petch", sans-serif;
+  margin-top: 8px;
+}
+.factsRow {
+  display: flex;
+  gap: 18px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.factLabel {
+  font: 400 9px "JetBrains Mono", monospace;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+}
+.factValue {
+  font: 700 15px "JetBrains Mono", monospace;
+  color: #edeaf6;
+  margin-top: 3px;
+}
+
+.heroActions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  align-items: stretch;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.metricCard {
+  position: relative;
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.008));
+  padding: 17px 18px 15px;
+  overflow: hidden;
+}
+.metricTint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 42px;
+  height: 2px;
+}
+.metricHeadRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.metricLabel {
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+}
+.metricValueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 11px;
+}
+.metricValue {
+  font: 700 34px "JetBrains Mono", monospace;
+  color: var(--text-bright);
+}
+.metricUnit {
+  font: 400 12px "JetBrains Mono", monospace;
+  color: var(--text-faint);
+}
+.metricSpark {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 26px;
+  margin-top: 12px;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panelHead {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.panelHeadBar {
+  width: 16px;
+  height: 2px;
+  background: var(--acc);
+}
+.panelTitle {
+  font: 600 13px "Chakra Petch", sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.panelCount {
+  font: 500 10px "JetBrains Mono", monospace;
+  color: var(--text-faint);
+  letter-spacing: 0.14em;
+}
+
+.taskRow {
+  padding: 13px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.checkbox {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: #07070c;
+  font: 700 11px "JetBrains Mono", monospace;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.taskTitle {
+  font: 500 15px "Barlow", sans-serif;
+  color: var(--text);
+}
+.taskMeta {
+  font: 500 9px "JetBrains Mono", monospace;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+  margin-top: 5px;
+}
+.prioBadge {
+  flex: none;
+  font: 500 9px "JetBrains Mono", monospace;
+  letter-spacing: 0.16em;
+  padding: 4px 8px;
+  border: 1px solid;
+}
+
+.overduePanel {
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  background: linear-gradient(180deg, rgba(244, 63, 94, 0.07), rgba(255, 255, 255, 0.008));
+}
+.overdueHead {
+  padding: 13px 20px;
+  border-bottom: 1px solid rgba(244, 63, 94, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.overdueDot {
+  width: 7px;
+  height: 7px;
+  background: #f43f5e;
+  animation: fnPulse 1.7s ease-in-out infinite;
+}
+.overdueRow {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(244, 63, 94, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.lateLabel {
+  font: 700 11px "JetBrains Mono", monospace;
+  color: #ff8098;
+  width: 72px;
+}
+
+.sidePanel {
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
+  padding: 18px 20px;
+}
+.sideHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.sideHeadBar {
+  width: 16px;
+  height: 2px;
+  background: var(--acc2);
+}
+.sideTitle {
+  font: 600 12px "Chakra Petch", sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.goalRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.goalTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.goalTitle {
+  font: 500 14px "Barlow", sans-serif;
+}
+.goalRatio {
+  font: 700 12px "JetBrains Mono", monospace;
+}
+.goalMeta {
+  font: 400 9px "JetBrains Mono", monospace;
+  letter-spacing: 0.16em;
+  color: var(--text-faint);
+}
+
+.projectRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.28);
+}
+.projectTint {
+  width: 3px;
+  height: 26px;
+}
+.projectTitle {
+  flex: 1;
+  min-width: 0;
+  font: 500 14px "Barlow", sans-serif;
+}
+.projectMinutes {
+  font: 700 11px "JetBrains Mono", monospace;
+  color: #d8d4e6;
+}
+
+@media (max-width: 960px) {
+  .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .content { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .dateBlock { text-align: left; }
+  .hero { grid-template-columns: 1fr; gap: 18px; padding: 20px; }
+  .heroActions { flex-direction: row; flex-wrap: wrap; }
+  .metrics { grid-template-columns: 1fr; }
+}

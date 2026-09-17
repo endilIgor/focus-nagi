@@ -4,6 +4,7 @@ WORKDIR /build
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 RUN ./mvnw -q dependency:go-offline
+COPY frontend/ frontend/
 COPY src/ src/
 RUN ./mvnw -q -DskipTests package && \
     java -Djarmode=tools -jar target/focus-nagi-*.jar extract --layers --launcher --destination target/extracted

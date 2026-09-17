@@ -27,3 +27,11 @@ Thumbs.db
 
 # Test artifacts
 test-output/
+
+# Frontend (Vite + React) — build output is generated into src/main/resources/static
+frontend/node_modules/
+frontend/node/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+src/main/resources/static/

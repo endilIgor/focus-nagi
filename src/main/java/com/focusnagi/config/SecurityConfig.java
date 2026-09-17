@@ -37,6 +37,25 @@ public class SecurityConfig {
     "/api/auth/login", "/api/auth/csrf", "/actuator/health", "/actuator/info"
   };
 
+  // The compiled SPA shell (static/index.html + hashed assets) carries no secrets and must be
+  // publicly loadable so the browser can render the login screen and client-side routes before
+  // any session exists. All actual data still flows through /api/** behind authentication.
+  private static final String[] STATIC_ENDPOINTS = {
+    "/",
+    "/index.html",
+    "/assets/**",
+    "/favicon.ico",
+    "/login",
+    "/hoje",
+    "/foco",
+    "/tarefas",
+    "/projetos",
+    "/metas",
+    "/notas",
+    "/diario",
+    "/analytics"
+  };
+
   private static final String[] SWAGGER_ENDPOINTS = {
     "/swagger-ui.html", "/swagger-ui/**", "/api/openapi", "/api/openapi/**"
   };
@@ -75,6 +94,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             auth -> {
               auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll();
+              auth.requestMatchers(STATIC_ENDPOINTS).permitAll();
               if (properties.swagger().enabled()) {
                 auth.requestMatchers(SWAGGER_ENDPOINTS).permitAll();
               }

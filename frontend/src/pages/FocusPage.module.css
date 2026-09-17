@@ -1,0 +1,182 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.chamber {
+  position: relative;
+  border: 1px solid var(--hairline);
+  background: linear-gradient(155deg, var(--glow), rgba(255, 255, 255, 0.03) 42%, rgba(255, 255, 255, 0.006));
+  backdrop-filter: blur(10px);
+  padding: 32px 30px 28px;
+  overflow: hidden;
+  clip-path: polygon(0 0, calc(100% - 30px) 0, 100% 30px, 100% 100%, 0 100%);
+}
+.chamberInset {
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.045);
+  pointer-events: none;
+}
+.chamberHead {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.chamberStatus {
+  font: 600 13px "Chakra Petch", sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #d8d4e6;
+  margin-top: 8px;
+}
+.chamberMeta {
+  text-align: right;
+  font: 400 10px "JetBrains Mono", monospace;
+  color: var(--text-faint);
+  letter-spacing: 0.14em;
+  line-height: 1.9;
+}
+
+.ringWrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin: 16px 0 4px;
+}
+.clockText {
+  font: 700 74px "JetBrains Mono", monospace;
+  letter-spacing: -0.03em;
+  color: #faf8ff;
+  text-align: center;
+}
+.clockSub {
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  margin-top: 4px;
+  text-align: center;
+}
+.ticks {
+  margin-top: 14px;
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+}
+.tick {
+  width: 3px;
+  height: 12px;
+}
+
+.presets {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 16px 0 20px;
+  flex-wrap: wrap;
+}
+
+.actions {
+  position: relative;
+  display: flex;
+  gap: 10px;
+}
+.actionBtn {
+  border: 1px solid;
+  padding: 16px 20px;
+  font: 700 12px "Chakra Petch", sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.actionBtn:hover {
+  filter: brightness(1.18);
+}
+.actionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.linkPanel {
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
+  padding: 18px 20px;
+}
+.linkTitle {
+  font: 600 12px "Chakra Petch", sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.linkNote {
+  font: 400 11px "JetBrains Mono", monospace;
+  color: var(--text-faint);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+.historyPanel {
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
+}
+.historyHead {
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.historyRow {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.historyWhen {
+  font: 400 11px "JetBrains Mono", monospace;
+  color: var(--text-faint);
+  width: 76px;
+  flex: none;
+}
+.historyTitle {
+  flex: 1;
+  min-width: 0;
+  font: 500 13px "Barlow", sans-serif;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.historyMinutes {
+  font: 700 12px "JetBrains Mono", monospace;
+  color: #e4e0ef;
+}
+.historyStatus {
+  font: 500 9px "JetBrains Mono", monospace;
+  letter-spacing: 0.16em;
+  padding: 3px 7px;
+  border: 1px solid;
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .chamber { padding: 24px 18px; }
+  .chamberHead { gap: 14px; }
+  .clockText { font-size: 48px; }
+  .actions, .historyRow { flex-wrap: wrap; }
+  .actionBtn { flex: 1 1 140px; }
+}

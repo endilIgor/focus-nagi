@@ -1,7 +1,8 @@
 # Focus Nagi
 
-Backend de uma aplicação pessoal single-user de foco e produtividade (pomodoro, tarefas,
-projetos, metas, notas, diário e analytics). Monólito modular Java + Spring Boot + PostgreSQL.
+Aplicação pessoal single-user de foco e produtividade (pomodoro, tarefas, projetos, metas, notas,
+diário e analytics). Backend Java + Spring Boot + PostgreSQL, com um frontend React (Vite) servido
+pelo próprio Spring Boot na mesma origem — um único processo, uma única porta.
 
 ## Stack
 
@@ -10,6 +11,7 @@ projetos, metas, notas, diário e analytics). Monólito modular Java + Spring Bo
 - Sessão server-side com cookie HttpOnly + CSRF (CookieCsrfTokenRepository)
 - springdoc-openapi (Swagger UI), Spotless (google-java-format)
 - Testes: JUnit 5, Testcontainers PostgreSQL (nunca H2), MockMvc
+- Frontend: React 18 + TypeScript + Vite, TanStack Query, React Router (ver [`frontend/`](frontend))
 - Docker multi-stage (usuário não-root) + Docker Compose
 
 ## Estrutura
@@ -20,14 +22,20 @@ Organização por feature em `src/main/java/com/focusnagi/`:
 - `project/`, `task/` (com subtasks), `focus/`, `goal/`, `note/`, `journal/`
 - `analytics/` — agregações (summary, streaks, heatmap, by-day/week/month/hour/project)
 - `today/` — projeção compacta do dia
-- `config/`, `common/` — segurança, erros, relógio/timezone
+- `config/`, `common/` — segurança, erros, relógio/timezone, forwarding da SPA
 
 Controllers finos; regras em services/entities; DTOs de entrada/saída (nunca serializa entidades
 JPA); agregações no banco (SQL nativo com `AT TIME ZONE` para os buckets de analytics).
 
+`frontend/` contém a SPA (React + Vite); o build de produção é gerado em
+`src/main/resources/static` (gitignored — artefato de build, não fonte) e servido pelo Spring Boot
+como recurso estático. Ver [## Frontend](#frontend) abaixo.
+
 ## Requisitos
 
 - JDK 21 e Docker (para Testcontainers e Compose)
+- Node.js 22.12+ apenas para desenvolvimento do frontend fora do Maven/Docker (o build de produção
+  baixa seu próprio Node via `frontend-maven-plugin`, não precisa de Node instalado no host/CI)
 
 ## Executar
 
@@ -36,8 +44,9 @@ cp .env.example .env   # preencha APP_OWNER_PASSWORD e POSTGRES_PASSWORD
 docker compose up --build
 ```
 
-API em `http://localhost:8080`, Swagger em `/swagger-ui` (desabilitado por padrão; ative com
-`APP_SWAGGER_ENABLED=true` ou rode com o profile `dev`).
+Isso builda o frontend (`frontend/` → `src/main/resources/static`) e o backend na mesma imagem.
+App completo (UI + API) em `http://localhost:8080`, Swagger em `/swagger-ui` (desabilitado por
+padrão; ative com `APP_SWAGGER_ENABLED=true` ou rode com o profile `dev`).
 
 Sem Docker (dev local): suba um PostgreSQL qualquer e ajuste `APP_DATABASE_URL`,
 `APP_DATABASE_USER`, `APP_DATABASE_PASSWORD`, ou rode só o banco:
@@ -47,12 +56,76 @@ docker compose up db
 APP_OWNER_PASSWORD=dev-secret ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
+## Frontend
+
+SPA em `frontend/` (React 18 + TypeScript + Vite). Fala com a API existente via `fetch` com
+`credentials: "include"`, replica o fluxo de sessão/CSRF do backend (busca o token em
+`GET /api/auth/csrf`, envia `X-XSRF-TOKEN` em toda mutação) e usa TanStack Query para cache/estado
+de servidor e React Router para as 8 telas (Hoje, Foco, Tarefas, Projetos, Metas, Notas, Diário,
+Analytics) mais o login.
+
+### Desenvolvimento
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:5173, proxy de /api e /actuator para :8080
+```
+
+Rode a API em paralelo (`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` ou
+`docker compose up db api`) para o proxy do Vite funcionar.
+
+### Build e integração com o backend
+
+```bash
+npm run build         # emite direto em ../src/main/resources/static (emptyOutDir)
+npm run typecheck     # tsc -b --noEmit
+npm test              # vitest run
+```
+
+`./mvnw package` (e portanto o `Dockerfile`) já builda o frontend automaticamente via
+`frontend-maven-plugin`, executado na fase `generate-resources` antes dos recursos do Spring Boot
+serem processados — o jar final contém a UI compilada em `BOOT-INF/classes/static/`. Para iterar
+só no backend sem precisar de Node, pule o frontend:
+
+```bash
+./mvnw test -Dskip.frontend=true
+```
+
+`src/main/resources/static/` é gerado (gitignored); nunca edite os arquivos ali, edite
+`frontend/src/`.
+
+### Rotas públicas vs. autenticadas
+
+O shell da SPA (`/`, `/index.html`, `/assets/**` e as rotas de tela como `/tarefas`) é público no
+`SecurityConfig` — sem isso o navegador não conseguiria carregar nem a própria tela de login. Um
+`SpaForwardingController` encaminha carregamentos diretos/refresh dessas rotas para `index.html`
+(React Router assume o roteamento client-side a partir daí). Todos os dados continuam atrás de
+`/api/**`, protegido por sessão + CSRF como antes.
+
+### Decisões e limitações conscientes do frontend
+
+- O design original (protótipo Claude Design) tinha um medidor de "nível/XP" e um "log do
+  sistema" puramente decorativos, sem contraparte na API (nenhuma entidade de XP, nenhum endpoint
+  de log de auditoria). Para não fabricar dados falsos, esses dois elementos foram removidos; o
+  selo "+XP" nas tarefas foi mantido porque é só um rótulo estético sobre `estimatedMinutes`, um
+  campo real.
+- O filtro "DADOS: CHEIO/INÍCIO" do protótipo alternava entre dados mockados cheios e vazios — era
+  um recurso da ferramenta de design, não da aplicação; não existe no frontend final.
+- A escolha de paleta de cores (4 temas) é uma preferência 100% client-side (`localStorage`), sem
+  endpoint de preferências no backend — comportamento equivalente a um dark-mode toggle comum.
+- No painel "Vincular" da tela de Foco, a tarefa/projeto/notas só podem ser definidos ao *iniciar*
+  uma sessão (é o que `POST /api/focus-sessions` aceita); enquanto a sessão está ativa esses campos
+  aparecem como somente leitura, porque a API não expõe um jeito de alterá-los depois.
+
 ## Testes
 
 ```bash
-./mvnw verify        # testes (Testcontainers/PostgreSQL) + spotless:check + package
+./mvnw verify        # testes (Testcontainers/PostgreSQL) + spotless:check + package + build do frontend
 ./mvnw test
 ./mvnw spotless:apply
+
+cd frontend && npm test && npm run typecheck
 ```
 
 ## Variáveis de ambiente
@@ -128,3 +201,5 @@ filtros e analytics) vivem no SQL.
 - Sem HTTPS embutido: termine TLS no proxy reverso e use `APP_COOKIE_SECURE=true`.
 - Em produção, defina valores aleatórios para `APP_OWNER_PASSWORD` e `POSTGRES_PASSWORD`; os
   defaults previsíveis do Compose existem somente para facilitar desenvolvimento local.
+- Analytics: `AnalyticsPeriod` só tem `TODAY`/`WEEK`/`MONTH`; o frontend não oferece um filtro
+  "ALL" porque a API não o suporta.

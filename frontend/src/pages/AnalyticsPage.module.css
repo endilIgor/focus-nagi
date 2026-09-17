@@ -1,0 +1,203 @@
+.headRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.periods {
+  display: flex;
+  gap: 6px;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.summaryCard {
+  position: relative;
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.008));
+  padding: 18px;
+  overflow: hidden;
+}
+.summaryTint {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 2px;
+}
+.summaryLabel {
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+}
+.summaryValue {
+  font: 700 33px "JetBrains Mono", monospace;
+  margin-top: 9px;
+}
+.summaryHint {
+  font: 400 10px "JetBrains Mono", monospace;
+  color: var(--text-faint);
+  margin-top: 5px;
+}
+
+.panel {
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.panelHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.panelTitle {
+  font: 600 12px "Chakra Petch", sans-serif;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 500 9px "JetBrains Mono", monospace;
+  color: var(--text-mute);
+  letter-spacing: 0.14em;
+}
+.legendSwatch {
+  width: 11px;
+  height: 11px;
+}
+
+.heatGrid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 13px);
+  gap: 4px;
+  overflow-x: auto;
+}
+.heatCell {
+  width: 13px;
+  height: 13px;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.dayBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 172px;
+}
+.dayBarCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+}
+.dayBarValue {
+  font: 500 9px "JetBrains Mono", monospace;
+  color: var(--text-mute);
+}
+.dayBar {
+  width: 100%;
+  min-height: 2px;
+}
+.dayBarLabel {
+  font: 500 9px "JetBrains Mono", monospace;
+  color: var(--text-faint);
+}
+
+.hourBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 172px;
+}
+.hourBar {
+  flex: 1;
+  min-height: 2px;
+}
+.hourAxis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  font: 500 9px "JetBrains Mono", monospace;
+  color: var(--text-mute);
+}
+
+.bottomTwoCol {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.projectRow {
+  margin-bottom: 14px;
+}
+.projectRowHead {
+  display: flex;
+  justify-content: space-between;
+  font: 500 13px "Barlow", sans-serif;
+  color: #e4e0ef;
+}
+
+.weekRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 11px;
+}
+.weekLabel {
+  width: 60px;
+  flex: none;
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+}
+.weekTrack {
+  flex: 1;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  position: relative;
+}
+.weekFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+.weekValue {
+  width: 52px;
+  flex: none;
+  text-align: right;
+  font: 700 11px "JetBrains Mono", monospace;
+  color: #e4e0ef;
+}
+
+@media (max-width: 960px) {
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .twoCol, .bottomTwoCol { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .summary { grid-template-columns: 1fr; }
+  .periods { width: 100%; overflow-x: auto; }
+  .panel { padding: 16px; }
+  .panelHead { align-items: flex-start; gap: 12px; flex-direction: column; }
+  .dayBars { min-width: 520px; }
+  .twoCol > .panel:first-child { overflow-x: auto; }
+}

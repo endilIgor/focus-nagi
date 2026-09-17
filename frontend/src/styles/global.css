@@ -1,0 +1,366 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #06060a;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  color: #f2f0f7;
+  font-family: "Chakra Petch", sans-serif;
+}
+
+a {
+  color: #c4b5fd;
+  text-decoration: none;
+}
+a:hover {
+  color: #e9e2ff;
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.55);
+  color: #fff;
+}
+
+input,
+textarea,
+button,
+select {
+  font-family: inherit;
+}
+
+button {
+  font: inherit;
+}
+
+/* ---- design tokens shared by every screen ---- */
+:root {
+  --bg: #06060a;
+  --text: #f2f0f7;
+  --text-dim: #b9b4c9;
+  --text-mute: #a5a0b8;
+  --text-faint: #8b86a0;
+  --text-bright: #f7f5fc;
+  --rose: #f43f5e;
+  --rose-text: #ff8098;
+  --amber-border: rgba(245, 200, 107, 0.4);
+  --amber-text: #f7ce7e;
+  --hairline: rgba(255, 255, 255, 0.07);
+  --hairline-strong: rgba(255, 255, 255, 0.18);
+}
+
+.fn-root {
+  min-height: 100vh;
+  background: radial-gradient(1200px 700px at 78% -12%, var(--glow), transparent 62%),
+    radial-gradient(820px 560px at 2% 104%, var(--soft), transparent 64%), #06060a;
+  color: var(--text);
+  position: relative;
+  overflow-x: hidden;
+}
+
+.fn-grid-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+.fn-hatch-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.022) 0 1px,
+    transparent 1px 5px
+  );
+}
+
+.fn-scanline-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fn-scanline {
+  height: 120px;
+  background: linear-gradient(180deg, transparent, var(--soft), transparent);
+  animation: fnScan 9s linear infinite;
+}
+
+@keyframes fnPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes fnScan {
+  0% {
+    transform: translateY(-4vh);
+  }
+  100% {
+    transform: translateY(104vh);
+  }
+}
+@keyframes fnRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fnCaret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes fnSheen {
+  0% {
+    transform: translateX(-130%);
+  }
+  100% {
+    transform: translateX(340%);
+  }
+}
+@keyframes fnBreathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+@keyframes fnTick {
+  0% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}
+@keyframes fnSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- reusable primitives ---- */
+
+.fn-panel {
+  position: relative;
+  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
+}
+
+.fn-corner-tl {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 16px;
+  height: 16px;
+  border-top: 2px solid var(--acc);
+  border-left: 2px solid var(--acc);
+  pointer-events: none;
+}
+.fn-corner-br {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 16px;
+  height: 16px;
+  border-bottom: 2px solid var(--acc2);
+  border-right: 2px solid var(--acc2);
+  pointer-events: none;
+}
+
+.fn-btn-primary {
+  background: var(--acc);
+  border: none;
+  color: #07070c;
+  padding: 15px 24px;
+  font: 700 12px "Chakra Petch", sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  clip-path: polygon(0 0, 100% 0, 100% 66%, calc(100% - 13px) 100%, 0 100%);
+  box-shadow: 0 18px 40px -20px var(--glow);
+  transition: filter 0.15s ease;
+}
+.fn-btn-primary:hover {
+  filter: brightness(1.12);
+}
+.fn-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.fn-btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d8d4e6;
+  padding: 12px 22px;
+  font: 600 11px "Chakra Petch", sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.fn-btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.fn-btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fn-btn-danger {
+  background: transparent;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #ff8098;
+  padding: 12px 22px;
+  font: 700 11px "Chakra Petch", sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.fn-btn-danger:hover {
+  filter: brightness(1.15);
+}
+
+.fn-mono-label {
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.24em;
+  color: var(--text-mute);
+}
+
+.fn-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.fn-eyebrow-bar {
+  width: 22px;
+  height: 2px;
+  background: var(--acc);
+}
+.fn-eyebrow-text {
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.3em;
+  color: var(--acc2);
+}
+
+.fn-h1 {
+  margin: 0;
+  font: 600 38px "Chakra Petch", sans-serif;
+  letter-spacing: -0.015em;
+}
+
+.fn-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.fn-field > span:first-child {
+  font: 400 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.24em;
+  color: var(--text-mute);
+}
+.fn-input,
+.fn-textarea,
+.fn-select {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 2px solid var(--acc);
+  color: var(--text);
+  padding: 13px 14px;
+  font: 400 15px "JetBrains Mono", monospace;
+  outline: none;
+  width: 100%;
+}
+.fn-textarea {
+  font: 400 14px "Barlow", sans-serif;
+  resize: vertical;
+}
+.fn-input:focus,
+.fn-textarea:focus,
+.fn-select:focus {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.fn-empty {
+  padding: 44px 20px;
+  text-align: center;
+  font: 500 12px "JetBrains Mono", monospace;
+  color: var(--text-mute);
+  letter-spacing: 0.16em;
+}
+
+.fn-chip {
+  padding: 9px 15px;
+  font: 500 10px "JetBrains Mono", monospace;
+  letter-spacing: 0.18em;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--text-mute);
+  transition: border-color 0.15s ease;
+}
+.fn-chip:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.fn-chip.is-active {
+  background: var(--glow);
+  border-color: var(--acc);
+  color: var(--text-bright);
+}
+
+.fn-error-banner {
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  background: rgba(244, 63, 94, 0.1);
+  color: #ff8098;
+  padding: 12px 16px;
+  font: 500 12px "JetBrains Mono", monospace;
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+}
+
+.fn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--acc2);
+  border-radius: 50%;
+  animation: fnSpin 0.7s linear infinite;
+  display: inline-block;
+}

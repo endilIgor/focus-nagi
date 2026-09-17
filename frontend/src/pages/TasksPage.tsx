@@ -82,6 +82,11 @@ export function TasksPage() {
     onSuccess: invalidateTasks,
     onError: (err) => setRowError(describeApiError(err)),
   });
+  const removeSubtask = useMutation({
+    mutationFn: ({ taskId, subtaskId }: { taskId: number; subtaskId: number }) => tasksApi.removeSubtask(taskId, subtaskId),
+    onSuccess: invalidateTasks,
+    onError: (err) => setRowError(describeApiError(err)),
+  });
 
   const today = todayIso();
   const rows = tasksQuery.data ?? [];
@@ -213,7 +218,7 @@ export function TasksPage() {
                       <button
                         className="fn-btn-ghost"
                         style={{ padding: "3px 8px", fontSize: 9, marginLeft: "auto" }}
-                        onClick={() => tasksApi.removeSubtask(t.id, s.id).then(invalidateTasks)}
+                        onClick={() => removeSubtask.mutate({ taskId: t.id, subtaskId: s.id })}
                       >
                         remover
                       </button>

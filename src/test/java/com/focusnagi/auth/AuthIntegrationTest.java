@@ -102,6 +102,22 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void shouldRejectOversizedCredentialsInsteadOfErroringInThePasswordEncoder() throws Exception {
+      String tooLongUsername = "u".repeat(51);
+      String tooLongPassword = "p".repeat(73);
+
+      mvc.perform(
+              post("/api/auth/login")
+                  .with(csrf())
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content(
+                      "{\"username\": \"%s\", \"password\": \"%s\"}"
+                          .formatted(tooLongUsername, tooLongPassword)))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
     void shouldTemporarilyLockAfterRepeatedFailures() throws Exception {
       for (int i = 0; i < 5; i++) {
         login(USERNAME, "wrong-" + i);

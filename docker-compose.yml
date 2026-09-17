@@ -29,8 +29,6 @@ services:
       APP_COOKIE_SECURE: "false"
       APP_TIME_ZONE: ${APP_TIME_ZONE:-UTC}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-}
-    ports:
-      - "8080:8080"
     healthcheck:
       test:
         [
@@ -41,6 +39,8 @@ services:
       timeout: 3s
       retries: 12
       start_period: 30s
+    ports:
+      - "${APP_PORT:-8080}:8080"
 
 volumes:
   postgres-data:

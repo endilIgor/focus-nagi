@@ -107,8 +107,8 @@ curl -s -c /tmp/jar -b /tmp/jar -H "Content-Type: application/json" \
 - `focusedMinutes` = `actualFocusSeconds / 60` (arredondamento para baixo). Apenas sessões
   `COMPLETED` contam; `CANCELLED` é ignorada. Duração é calculada sempre no servidor (relógio
   injetável, ignorando o relógio do cliente); pausas são descontadas via `paused_seconds_accum`.
-- Streak: dias consecutivos (no timezone do app) com foco > 0. O streak atual termina hoje, ou
-  ontem se hoje ainda não tiver foco (o dia não acabou).
+- Streak: dias consecutivos (no timezone do app) com pelo menos 1 segundo de foco efetivo. O
+  streak atual termina hoje, ou ontem se hoje ainda não tiver foco (o dia não acabou).
 - Uma única sessão ativa (`RUNNING`/`PAUSED`) por vez, garantida por índice único parcial do
   PostgreSQL além da checagem na aplicação.
 - Heatmap e `focus/by-day` incluem dias com zero; heatmap limita o intervalo a 366 dias.

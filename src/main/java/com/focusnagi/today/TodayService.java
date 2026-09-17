@@ -93,7 +93,7 @@ public class TodayService {
   }
 
   private TodayGoalResponse toGoalResponse(Goal goal) {
-    GoalProgressResponse progress = goalService.progress(goal.getId());
+    GoalProgressResponse progress = goalService.progress(goal);
     return new TodayGoalResponse(
         goal.getId(),
         goal.getTitle(),

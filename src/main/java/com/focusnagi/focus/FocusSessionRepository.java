@@ -87,7 +87,7 @@ public interface FocusSessionRepository
           """
           SELECT DISTINCT (started_at AT TIME ZONE CAST(:zone AS text))::date::text AS day
           FROM focus_session
-          WHERE status = 'COMPLETED'
+          WHERE status = 'COMPLETED' AND actual_focus_seconds > 0
           ORDER BY 1
           """,
       nativeQuery = true)

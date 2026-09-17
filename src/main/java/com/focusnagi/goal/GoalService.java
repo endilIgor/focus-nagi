@@ -124,7 +124,11 @@ public class GoalService {
 
   @Transactional(readOnly = true)
   public GoalProgressResponse progress(long id) {
-    Goal goal = find(id);
+    return progress(find(id));
+  }
+
+  @Transactional(readOnly = true)
+  public GoalProgressResponse progress(Goal goal) {
     LocalDate[] window = currentWindow(goal);
     Instant from = window[0].atStartOfDay(zoneId).toInstant();
     Instant to = window[1].plusDays(1).atStartOfDay(zoneId).toInstant();

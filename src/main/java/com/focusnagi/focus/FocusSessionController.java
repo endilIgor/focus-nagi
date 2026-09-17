@@ -32,10 +32,11 @@ public class FocusSessionController {
 
   @GetMapping("/current")
   ResponseEntity<FocusSessionResponse> current() {
-    if (!focusSessionService.hasActive()) {
+    FocusSessionResponse current = focusSessionService.currentOrNull();
+    if (current == null) {
       return ResponseEntity.noContent().build();
     }
-    return ResponseEntity.ok(focusSessionService.current());
+    return ResponseEntity.ok(current);
   }
 
   @GetMapping

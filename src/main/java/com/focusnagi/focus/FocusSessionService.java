@@ -74,8 +74,11 @@ public class FocusSessionService {
   }
 
   @Transactional(readOnly = true)
-  public boolean hasActive() {
-    return focusSessionRepository.existsByStatusIn(ACTIVE_STATUSES);
+  public FocusSessionResponse currentOrNull() {
+    return focusSessionRepository.findAll(activeSpec()).stream()
+        .findFirst()
+        .map(FocusSessionResponse::from)
+        .orElse(null);
   }
 
   @Transactional(readOnly = true)

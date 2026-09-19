@@ -8,6 +8,7 @@ import { computeElapsedSeconds, useCurrentFocusSession } from "../hooks/useFocus
 import { useClockTick } from "../hooks/useClock";
 import { useTheme } from "../theme/ThemeContext";
 import { describeApiError } from "../utils/errors";
+import { FOCUS_SESSION_STATUS_LABEL } from "../utils/labels";
 import styles from "./FocusPage.module.css";
 
 const PRESETS = [25, 50, 90, 15];
@@ -329,7 +330,7 @@ export function FocusPage() {
                 <span className={styles.historyWhen}>{new Date(h.startedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                 <span className={styles.historyTitle}>{h.taskId ? `Tarefa #${h.taskId}` : h.projectId ? `Projeto #${h.projectId}` : "Sessão livre"}</span>
                 <span className={styles.historyMinutes}>{minutes}min</span>
-                <span className={styles.historyStatus} style={{ borderColor: st[0], color: st[1] }}>{h.status}</span>
+                <span className={styles.historyStatus} style={{ borderColor: st[0], color: st[1] }}>{FOCUS_SESSION_STATUS_LABEL[h.status]}</span>
               </div>
             );
           })}

@@ -9,6 +9,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { getTints } from "../theme/themes";
 import { todayIso } from "../utils/date";
 import { describeApiError } from "../utils/errors";
+import { PROJECT_STATUS_LABEL } from "../utils/labels";
 import { dueLabel } from "../utils/taskDisplay";
 import styles from "./ProjectsPage.module.css";
 
@@ -104,7 +105,7 @@ export function ProjectsPage() {
                   }}
                   title="Clique para mudar status"
                 >
-                  {p.status}
+                  {PROJECT_STATUS_LABEL[p.status]}
                 </span>
               </div>
               {p.description && <div className={styles.description}>{p.description}</div>}

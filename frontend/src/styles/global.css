@@ -364,3 +364,35 @@ button {
   animation: fnSpin 0.7s linear infinite;
   display: inline-block;
 }
+
+/* ---- keyboard focus ---- */
+:focus-visible {
+  outline: 2px solid var(--acc2);
+  outline-offset: 2px;
+}
+/* clip-path clips regular outlines, so clipped controls signal focus with a glow instead. */
+.fn-btn-primary:focus-visible {
+  outline: none;
+  filter: brightness(1.12) drop-shadow(0 0 12px var(--acc));
+}
+
+/* 16px+ inputs on mobile prevent Safari/iOS from zooming in on focus. */
+@media (max-width: 760px) {
+  .fn-input,
+  .fn-textarea,
+  .fn-select {
+    font-size: 16px;
+  }
+}
+
+/* ---- motion preferences ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -9,6 +9,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { getTints } from "../theme/themes";
 import { todayIso } from "../utils/date";
 import { describeApiError } from "../utils/errors";
+import { GOAL_PERIOD_LABEL, GOAL_STATUS_LABEL, GOAL_TYPE_LABEL } from "../utils/labels";
 import styles from "./GoalsPage.module.css";
 
 const UNIT_LABEL: Record<GoalType, string> = {
@@ -87,14 +88,14 @@ export function GoalsPage() {
               <ProgressRing size={100} radius={50} strokeWidth={8} progress={pct / 100} color={finalTint} glow={theme.glow} />
               <div className={styles.body}>
                 <div className={styles.type}>
-                  {g.type.replace(/_/g, " ")} &middot; {g.period}
+                  {GOAL_TYPE_LABEL[g.type]} · {GOAL_PERIOD_LABEL[g.period]}
                 </div>
                 <div className={styles.title}>{g.title}</div>
                 <div className={styles.ratio} style={{ color: finalTint }}>
                   {current} / {target} {UNIT_LABEL[g.type]}
                 </div>
                 <div className={styles.meta}>
-                  {progress ? `${progress.periodStart} → ${progress.periodEnd} · ${pct}%` : `${g.status} · ${pct}%`}
+                  {progress ? `${progress.periodStart} → ${progress.periodEnd} · ${pct}%` : `${GOAL_STATUS_LABEL[g.status]} · ${pct}%`}
                 </div>
                 <div className={styles.actions}>
                   {g.status === "ACTIVE" && (
@@ -173,18 +174,18 @@ function CreateGoalPanel({ onCreated }: { onCreated: () => void }) {
       <label className="fn-field">
         <span>TIPO</span>
         <select className="fn-select" value={type} onChange={(e) => setType(e.target.value as GoalType)}>
-          <option value="FOCUS_MINUTES">FOCUS_MINUTES</option>
-          <option value="FOCUS_SESSIONS">FOCUS_SESSIONS</option>
-          <option value="TASKS_COMPLETED">TASKS_COMPLETED</option>
+          <option value="FOCUS_MINUTES">{GOAL_TYPE_LABEL.FOCUS_MINUTES}</option>
+          <option value="FOCUS_SESSIONS">{GOAL_TYPE_LABEL.FOCUS_SESSIONS}</option>
+          <option value="TASKS_COMPLETED">{GOAL_TYPE_LABEL.TASKS_COMPLETED}</option>
         </select>
       </label>
       <label className="fn-field">
         <span>PERÍODO</span>
         <select className="fn-select" value={period} onChange={(e) => setPeriod(e.target.value as GoalPeriod)}>
-          <option value="DAILY">DAILY</option>
-          <option value="WEEKLY">WEEKLY</option>
-          <option value="MONTHLY">MONTHLY</option>
-          <option value="CUSTOM">CUSTOM</option>
+          <option value="DAILY">{GOAL_PERIOD_LABEL.DAILY}</option>
+          <option value="WEEKLY">{GOAL_PERIOD_LABEL.WEEKLY}</option>
+          <option value="MONTHLY">{GOAL_PERIOD_LABEL.MONTHLY}</option>
+          <option value="CUSTOM">{GOAL_PERIOD_LABEL.CUSTOM}</option>
         </select>
       </label>
       <label className="fn-field">

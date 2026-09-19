@@ -114,10 +114,13 @@ export function AppShell() {
                   key={t.key}
                   type="button"
                   title={t.label}
+                  aria-label={`Tema ${t.label}`}
+                  aria-pressed={t.key === themeKey}
                   onClick={() => setThemeKey(t.key)}
-                  className={`${styles.swatch} ${t.key === themeKey ? styles.active : ""}`}
-                  style={{ background: t.swatch }}
-                />
+                  className={styles.swatch}
+                >
+                  <span className={styles.swatchChip} style={{ background: t.swatch }} />
+                </button>
               ))}
             </div>
 

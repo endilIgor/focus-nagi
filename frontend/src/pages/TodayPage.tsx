@@ -12,6 +12,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { getTints } from "../theme/themes";
 import { addDaysIso, formatDateLong, todayIso } from "../utils/date";
 import { describeApiError } from "../utils/errors";
+import { TASK_PRIORITY_LABEL } from "../utils/labels";
 import { daysUntil, priorityStyle } from "../utils/taskDisplay";
 import styles from "./TodayPage.module.css";
 
@@ -223,7 +224,7 @@ export function TodayPage() {
                     <div className={styles.taskMeta}>PRAZO HOJE</div>
                   </div>
                   <span className={styles.prioBadge} style={{ borderColor: prio.border, color: prio.color }}>
-                    {t.priority}
+                    {TASK_PRIORITY_LABEL[t.priority]}
                   </span>
                 </div>
               );

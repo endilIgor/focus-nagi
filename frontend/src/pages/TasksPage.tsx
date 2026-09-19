@@ -8,6 +8,7 @@ import { useTheme } from "../theme/ThemeContext";
 import { getTints } from "../theme/themes";
 import { todayIso } from "../utils/date";
 import { describeApiError } from "../utils/errors";
+import { TASK_PRIORITY_LABEL, TASK_STATUS_LABEL } from "../utils/labels";
 import { daysUntil, dueLabel, priorityStyle } from "../utils/taskDisplay";
 import styles from "./TasksPage.module.css";
 
@@ -144,7 +145,7 @@ export function TasksPage() {
 
       {rowError && <div className="fn-error-banner">{rowError}</div>}
 
-      <div className={styles.table}>
+      <div className={styles.table} role="region" aria-label="Lista de tarefas" tabIndex={0}>
         <div className={styles.tableHead}>
           <span />
           <span>TÍTULO</span>
@@ -182,7 +183,7 @@ export function TasksPage() {
                   <div className={styles.title} style={{ color: done ? "var(--text-faint)" : "var(--text)", textDecoration: done ? "line-through" : "none" }}>
                     {t.title}
                   </div>
-                  <div className={styles.subLabel}>{t.status}</div>
+                  <div className={styles.subLabel}>{TASK_STATUS_LABEL[t.status]}</div>
                 </button>
                 <span className={styles.projectCell}>
                   {t.projectId && (
@@ -196,7 +197,7 @@ export function TasksPage() {
                   {dueLabel(t.dueDate, today)}
                 </span>
                 <span className={styles.prioBadge} style={{ borderColor: prio.border, color: prio.color }}>
-                  {t.priority}
+                  {TASK_PRIORITY_LABEL[t.priority]}
                 </span>
                 <span className={styles.estCell}>{t.estimatedMinutes ? `${t.estimatedMinutes}min` : "—"}</span>
               </div>
@@ -318,9 +319,9 @@ function CreateTaskPanel({
       <label className="fn-field">
         <span>PRIORIDADE</span>
         <select className="fn-select" value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
-          <option value="LOW">LOW</option>
-          <option value="MEDIUM">MEDIUM</option>
-          <option value="HIGH">HIGH</option>
+          <option value="LOW">{TASK_PRIORITY_LABEL.LOW}</option>
+          <option value="MEDIUM">{TASK_PRIORITY_LABEL.MEDIUM}</option>
+          <option value="HIGH">{TASK_PRIORITY_LABEL.HIGH}</option>
         </select>
       </label>
       <label className="fn-field">

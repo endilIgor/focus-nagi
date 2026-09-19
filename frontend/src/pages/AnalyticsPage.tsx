@@ -8,6 +8,7 @@ import { getTints } from "../theme/themes";
 import { fillHourlyFocus } from "../utils/analytics";
 import { addDaysIso, todayIso, weekdayLabel } from "../utils/date";
 import { describeApiError } from "../utils/errors";
+import { ANALYTICS_PERIOD_LABEL } from "../utils/labels";
 import styles from "./AnalyticsPage.module.css";
 
 const PERIODS: AnalyticsPeriod[] = ["TODAY", "WEEK", "MONTH"];
@@ -74,14 +75,14 @@ export function AnalyticsPage() {
         <div className={styles.periods}>
           {PERIODS.map((p) => (
             <button key={p} className={`fn-chip ${period === p ? "is-active" : ""}`} onClick={() => setPeriod(p)}>
-              {p}
+              {ANALYTICS_PERIOD_LABEL[p]}
             </button>
           ))}
         </div>
       </div>
 
       <div className={styles.summary}>
-        <SummaryCard label="MINUTOS FOCADOS" value={summary ? formatMinutesAsHm(summary.focusedMinutes) : "…"} tint="#F7F5FC" hint={`${period} · SÓ SESSÕES COMPLETED`} />
+        <SummaryCard label="MINUTOS FOCADOS" value={summary ? formatMinutesAsHm(summary.focusedMinutes) : "…"} tint="#F7F5FC" hint={`${ANALYTICS_PERIOD_LABEL[period]} · SÓ SESSÕES CONCLUÍDAS`} />
         <SummaryCard label="SESSÕES" value={summary ? String(summary.sessionCount) : "…"} tint={theme.acc2} hint="TOTAL NO PERÍODO" />
         <SummaryCard label="STREAK ATUAL" value={streaksQuery.data ? `${streaksQuery.data.currentStreak}d` : "…"} tint="#F43F5E" hint={streaksQuery.data ? `MAIOR: ${streaksQuery.data.longestStreak}d` : "—"} />
         <SummaryCard label="MELHOR HORA" value={bestHour ? `${String(bestHour.hour).padStart(2, "0")}h` : "—"} tint={theme.acc} hint={bestHour ? `${bestHour.focusedMinutes}min NO PERÍODO (30d)` : "SEM DADOS"} />
@@ -109,7 +110,13 @@ export function AnalyticsPage() {
       </div>
 
       <div className={styles.twoCol}>
-        <div className={styles.panel} style={{ marginBottom: 0 }}>
+        <div
+          className={styles.panel}
+          style={{ marginBottom: 0 }}
+          role="region"
+          aria-label="Foco por dia nos últimos 14 dias"
+          tabIndex={0}
+        >
           <div className={styles.panelTitle} style={{ marginBottom: 18 }}>Foco por dia · 14d</div>
           <div className={styles.dayBars}>
             {byDay.map((d) => (

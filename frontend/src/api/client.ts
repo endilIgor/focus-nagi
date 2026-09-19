@@ -1,4 +1,4 @@
-import type { ApiError } from "./types";
+import type { ApiError, CsrfResponse } from "./types";
 
 export class ApiRequestError extends Error {
   readonly status: number;
@@ -18,28 +18,43 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
-function readCookie(name: string): string | null {
-  const match = document.cookie.match(
-    new RegExp("(?:^|; )" + name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1") + "=([^;]*)"),
-  );
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
+let csrfToken: string | null = null;
 let csrfTokenPromise: Promise<string> | null = null;
 
-/** Spring's CookieCsrfTokenRepository.withHttpOnlyFalse() default: cookie XSRF-TOKEN, header X-XSRF-TOKEN. */
-async function ensureCsrfToken(): Promise<string> {
-  const existing = readCookie("XSRF-TOKEN");
-  if (existing) return existing;
+/**
+ * Spring Security's XorCsrfTokenRequestAttributeHandler only accepts the masked token
+ * served by GET /api/auth/csrf; the raw XSRF-TOKEN cookie value is rejected with 403.
+ * The header value is therefore always sourced from the endpoint and cached per page load.
+ */
+async function fetchCsrfToken(): Promise<string> {
+  const response = await fetch("/api/auth/csrf", { credentials: "include" });
+  if (!response.ok) {
+    throw new ApiRequestError(response.status, null);
+  }
+  const body = (await response.json()) as CsrfResponse;
+  csrfToken = body.token;
+  return body.token;
+}
+
+function ensureCsrfToken(): Promise<string> {
+  if (csrfToken) return Promise.resolve(csrfToken);
   if (!csrfTokenPromise) {
-    csrfTokenPromise = fetch("/api/auth/csrf", { credentials: "include" })
-      .then((res) => res.json())
-      .then((body: { token: string }) => body.token)
-      .finally(() => {
-        csrfTokenPromise = null;
-      });
+    csrfTokenPromise = fetchCsrfToken().finally(() => {
+      csrfTokenPromise = null;
+    });
   }
   return csrfTokenPromise;
+}
+
+/**
+ * Re-syncs the CSRF token after authentication events (login, logout, password change):
+ * the underlying token may rotate server-side, invalidating the cached value. A failed
+ * sync leaves the cache empty, so the next mutating request retries instead of reusing
+ * a stale token.
+ */
+export function refreshCsrfToken(): Promise<string> {
+  csrfToken = null;
+  return ensureCsrfToken();
 }
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);

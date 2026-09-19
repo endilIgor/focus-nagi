@@ -127,32 +127,6 @@
   color: var(--acc2);
 }
 
-.palettes {
-  margin-top: 16px;
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-.swatch {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-}
-.swatchChip {
-  width: 26px;
-  height: 26px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  clip-path: polygon(0 0, 100% 0, 100% 72%, 72% 100%, 0 100%);
-}
-.swatch[aria-pressed="true"] .swatchChip {
-  border-color: #fff;
-}
-
 @media (max-width: 520px) {
   .wrap {
     padding: 24px 16px;

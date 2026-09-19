@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiRequestError } from "../api/client";
-import { THEMES } from "../theme/themes";
 import { useTheme } from "../theme/ThemeContext";
 import { useAuth } from "./AuthContext";
 import styles from "./LoginPage.module.css";
@@ -14,7 +13,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export function LoginPage() {
   const { login } = useAuth();
-  const { theme, themeKey, setThemeKey } = useTheme();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -120,22 +119,6 @@ export function LoginPage() {
               <span>TTL 12h</span>
             </div>
           </form>
-
-          <div className={styles.palettes}>
-            {Object.values(THEMES).map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                title={t.label}
-                aria-label={`Tema ${t.label}`}
-                aria-pressed={t.key === themeKey}
-                onClick={() => setThemeKey(t.key)}
-                className={styles.swatch}
-              >
-                <span className={styles.swatchChip} style={{ background: t.swatch }} />
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </div>

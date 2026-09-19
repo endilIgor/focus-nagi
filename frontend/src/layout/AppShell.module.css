@@ -70,32 +70,6 @@
   flex: 1;
 }
 
-.palettes {
-  display: flex;
-  gap: 5px;
-  padding: 5px;
-  border: 1px solid var(--hairline);
-  background: rgba(255, 255, 255, 0.03);
-}
-.swatch {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-}
-.swatchChip {
-  width: 20px;
-  height: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-}
-.swatch[aria-pressed="true"] .swatchChip {
-  border-color: #fff;
-}
-
 .streak {
   display: flex;
   align-items: center;
@@ -121,6 +95,7 @@
 }
 .sparkBar {
   width: 3px;
+  transition: height 0.45s ease, background-color 0.2s ease;
 }
 
 .logoutBtn {
@@ -172,6 +147,7 @@
   display: flex;
   align-items: center;
   text-decoration: none;
+  transition: color 0.18s ease, background-color 0.18s ease;
 }
 .navItem:hover {
   color: var(--text-bright);
@@ -187,10 +163,14 @@
   bottom: 0;
   height: 2px;
   background: transparent;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
 }
 .navItem.active .navLine {
   background: var(--acc);
   box-shadow: 0 0 12px var(--acc);
+  transform: scaleX(1);
 }
 
 .main {
@@ -198,6 +178,9 @@
   margin: 0 auto;
   padding: 28px 30px 80px;
   position: relative;
+}
+.main > * {
+  animation: fnPageEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (max-width: 720px) {

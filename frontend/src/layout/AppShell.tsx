@@ -5,7 +5,6 @@ import { analyticsApi } from "../api/analytics";
 import { useAuth } from "../auth/AuthContext";
 import { useClockTick, formatClock } from "../hooks/useClock";
 import { computeElapsedSeconds, useCurrentFocusSession } from "../hooks/useFocusSession";
-import { THEMES } from "../theme/themes";
 import { useTheme } from "../theme/ThemeContext";
 import { addDaysIso, todayIso } from "../utils/date";
 import { describeApiError } from "../utils/errors";
@@ -23,7 +22,7 @@ const NAV: Array<[string, string]> = [
 ];
 
 export function AppShell() {
-  const { theme, themeKey, setThemeKey } = useTheme();
+  const { theme } = useTheme();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const now = useClockTick(1000);
@@ -83,9 +82,6 @@ export function AppShell() {
     >
       <div className="fn-grid-bg" />
       <div className="fn-hatch-bg" />
-      <div className="fn-scanline-wrap">
-        <div className="fn-scanline" />
-      </div>
 
       <div style={{ position: "relative" }}>
         <header className={styles.header}>
@@ -107,22 +103,6 @@ export function AppShell() {
             </div>
 
             <div className={styles.spacer} />
-
-            <div className={styles.palettes}>
-              {Object.values(THEMES).map((t) => (
-                <button
-                  key={t.key}
-                  type="button"
-                  title={t.label}
-                  aria-label={`Tema ${t.label}`}
-                  aria-pressed={t.key === themeKey}
-                  onClick={() => setThemeKey(t.key)}
-                  className={styles.swatch}
-                >
-                  <span className={styles.swatchChip} style={{ background: t.swatch }} />
-                </button>
-              ))}
-            </div>
 
             <div className={styles.streak}>
               <span className={styles.streakLabel}>STREAK</span>

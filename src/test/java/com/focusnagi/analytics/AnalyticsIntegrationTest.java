@@ -238,8 +238,13 @@ class AnalyticsIntegrationTest extends AbstractIntegrationTest {
     @Test
     void shouldReturnFocusByHour() throws Exception {
       completedSessionAt(todayAt(14), 30, null);
+      String today = LocalDate.now(ZoneOffset.UTC).toString();
 
-      mvc.perform(get("/api/analytics/focus/by-hour").with(asOwner()))
+      mvc.perform(
+              get("/api/analytics/focus/by-hour")
+                  .with(asOwner())
+                  .param("from", today)
+                  .param("to", today))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$[0].hour").value(14))
           .andExpect(jsonPath("$[0].focusedMinutes").value(30));

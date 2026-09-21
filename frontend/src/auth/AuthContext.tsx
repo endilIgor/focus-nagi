@@ -6,15 +6,16 @@ import {
   type ReactNode,
 } from "react";
 import { authApi, type LoginRequest } from "../api/auth";
-import { setUnauthorizedHandler } from "../api/client";
+import { ApiRequestError, setUnauthorizedHandler } from "../api/client";
 import { getSupabase } from "../api/supabase";
 import type { OwnerResponse } from "../api/types";
 
 interface AuthContextValue {
   owner: OwnerResponse | null;
-  status: "loading" | "authenticated" | "anonymous";
+  status: "loading" | "authenticated" | "anonymous" | "unavailable";
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
+  retrySession: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -26,7 +27,8 @@ async function clearLocalSession(): Promise<void> {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [owner, setOwner] = useState<OwnerResponse | null>(null);
-  const [status, setStatus] = useState<"loading" | "authenticated" | "anonymous">("loading");
+  const [status, setStatus] = useState<"loading" | "authenticated" | "anonymous" | "unavailable">("loading");
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
@@ -61,18 +63,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setOwner(me);
         setStatus("authenticated");
-      } catch {
-        // A stored session the API refuses (expired, revoked, not the allowed owner) or a network
-        // failure on boot: start anonymous so the user can sign in again.
+      } catch (err) {
         if (cancelled) return;
-        await clearLocalSession();
-        setStatus("anonymous");
+        if (err instanceof ApiRequestError && (err.status === 401 || err.status === 403)) {
+          await clearLocalSession();
+          if (!cancelled) setStatus("anonymous");
+          return;
+        }
+        // Keep a valid Supabase refresh session through Worker, database, and network outages.
+        setStatus("unavailable");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [bootstrapAttempt]);
+
+  const retrySession = () => {
+    setStatus("loading");
+    setBootstrapAttempt((attempt) => attempt + 1);
+  };
 
   const login = async (credentials: LoginRequest) => {
     try {
@@ -92,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ owner, status, login, logout }}>
+    <AuthContext.Provider value={{ owner, status, login, logout, retrySession }}>
       {children}
     </AuthContext.Provider>
   );

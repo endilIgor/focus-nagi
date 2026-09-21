@@ -14,7 +14,8 @@ order by 1;
 \echo 'Rows owned by anyone else (expected: 0 for a single-owner install):'
 select count(*) as foreign_rows from (
     select user_id from public.project union all select user_id from public.task
-    union all select user_id from public.focus_session union all select user_id from public.goal
+    union all select user_id from public.subtask union all select user_id from public.focus_session
+    union all select user_id from public.goal
     union all select user_id from public.note union all select user_id from public.journal_entry
 ) r where user_id <> :'owner_id';
 

@@ -208,11 +208,18 @@ A connection string (session pooler ou direta) está em **Project Settings → D
 
 - **Frontend**: Vercel → Deployments → **Instant Rollback** para o deploy anterior.
 - **Worker**: `npx wrangler deployments list` e `npx wrangler rollback [<version-id>]`.
-- **Banco**: migrations são forward-only e idempotentes; corrija com uma nova migration. Antes de
-  mudanças de schema faça um dump: `npx supabase db dump --data-only -f backup.sql` (ou `pg_dump`).
-- **Voltar ao VPS**: mantenha o stack antigo parado (não removido) e o export até confiar na nova
-  stack. Dados criados depois do corte existem só no Supabase — não há script de migração reversa;
-  exporte-os com `pg_dump` antes de voltar.
+- **Antes do corte**: pare as escritas no stack antigo e crie um backup completo, além dos CSVs:
+  `pg_dump --format=custom "$LEGACY_DATABASE_URL" -f legacy-pre-cutover.dump`. Não remova o banco,
+  o stack antigo nem esse dump até encerrar a janela de rollback.
+- **Janela segura**: depois de importar, mantenha os dois ambientes sem novas escritas enquanto faz
+  o smoke test. Decida entre rollback e abertura para uso antes de liberar o primeiro write no
+  Supabase. Nessa janela, voltar ao VPS não perde dados porque o banco legado permanece intacto.
+- **Banco Supabase**: migrations são forward-only; corrija schema com uma nova migration. Antes de
+  cada mudança e antes de abrir o uso, faça também um dump de `public` com schema + dados:
+  `pg_dump --format=custom --schema=public "$SUPABASE_DB_URL" -f supabase-public.dump`.
+- **Depois de liberar escritas**: não existe migração reversa automática. Um rollback exige primeiro
+  bloquear novas escritas e transferir manualmente para o legado tudo que foi criado no Supabase;
+  sem essa reconciliação, volte apenas o frontend/Worker e mantenha o Supabase como banco oficial.
 
 ## Limites dos planos gratuitos (confira as páginas de preço atuais)
 

@@ -78,6 +78,22 @@ describe("AuthProvider", () => {
     expect(fake.current.auth.signOut).toHaveBeenCalledWith({ scope: "local" });
   });
 
+  it("preserves a stored session when the Worker is temporarily unavailable", async () => {
+    fake.current.session = SESSION;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => reply(503, { code: "UPSTREAM_UNAVAILABLE", message: "Try later.", timestamp: "t" })),
+    );
+
+    renderApp();
+
+    await waitFor(() =>
+      expect(screen.getByText("Não foi possível confirmar sua sessão.")).toBeInTheDocument(),
+    );
+    expect(fake.current.auth.signOut).not.toHaveBeenCalled();
+    expect(fake.current.session).toBe(SESSION);
+  });
+
   it("returns to the login screen when any API call ends in 401", async () => {
     fake.current.session = SESSION;
     const fetchMock = vi.fn(() => reply(200, { id: "user-1", email: "owner@example.com" }));

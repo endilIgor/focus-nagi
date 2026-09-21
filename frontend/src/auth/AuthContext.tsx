@@ -6,8 +6,8 @@ import {
   type ReactNode,
 } from "react";
 import { authApi, type LoginRequest } from "../api/auth";
-import { ApiRequestError } from "../api/client";
 import { setUnauthorizedHandler } from "../api/client";
+import { getSupabase } from "../api/supabase";
 import type { OwnerResponse } from "../api/types";
 
 interface AuthContextValue {
@@ -19,6 +19,11 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/** Drops the local Supabase session without failing the caller (e.g. when already signed out). */
+async function clearLocalSession(): Promise<void> {
+  await authApi.logout().catch(() => undefined);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [owner, setOwner] = useState<OwnerResponse | null>(null);
   const [status, setStatus] = useState<"loading" | "authenticated" | "anonymous">("loading");
@@ -27,37 +32,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUnauthorizedHandler(() => {
       setOwner(null);
       setStatus("anonymous");
+      void clearLocalSession();
     });
     return () => setUnauthorizedHandler(null);
   }, []);
 
   useEffect(() => {
+    const { data } = getSupabase().auth.onAuthStateChange((event) => {
+      // Sign-outs in another tab (or an unrecoverable refresh) end this tab's session too.
+      if (event === "SIGNED_OUT") {
+        setOwner(null);
+        setStatus("anonymous");
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
-    authApi
-      .me()
-      .then((me) => {
+    (async () => {
+      try {
+        const { data } = await getSupabase().auth.getSession();
+        if (!data.session) {
+          if (!cancelled) setStatus("anonymous");
+          return;
+        }
+        const me = await authApi.me();
         if (cancelled) return;
         setOwner(me);
         setStatus("authenticated");
-      })
-      .catch((err) => {
+      } catch {
+        // A stored session the API refuses (expired, revoked, not the allowed owner) or a network
+        // failure on boot: start anonymous so the user can sign in again.
         if (cancelled) return;
-        if (err instanceof ApiRequestError && err.status === 401) {
-          setStatus("anonymous");
-        } else {
-          // Network/server error on boot: treat as anonymous so the user can retry via login.
-          setStatus("anonymous");
-        }
-      });
+        await clearLocalSession();
+        setStatus("anonymous");
+      }
+    })();
     return () => {
       cancelled = true;
     };
   }, []);
 
   const login = async (credentials: LoginRequest) => {
-    const me = await authApi.login(credentials);
-    setOwner(me);
-    setStatus("authenticated");
+    try {
+      const me = await authApi.login(credentials);
+      setOwner(me);
+      setStatus("authenticated");
+    } catch (err) {
+      await clearLocalSession();
+      throw err;
+    }
   };
 
   const logout = async () => {

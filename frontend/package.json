@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:vercel": "npm run build && node scripts/vercel-output.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "@tanstack/react-query": "^5.62.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

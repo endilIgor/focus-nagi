@@ -25,6 +25,14 @@ const KNOWN_MESSAGES: Record<string, string> = {
   JOURNAL_FUTURE_DATE: "A data da entrada não pode ser no futuro.",
   LOGIN_LOCKED: "Muitas tentativas. Aguarde alguns minutos.",
   INVALID_CREDENTIALS: "Usuário ou senha incorretos.",
+  MALFORMED_REQUEST: "Requisição inválida.",
+  PAYLOAD_TOO_LARGE: "Conteúdo grande demais para ser salvo.",
+  ANALYTICS_INVALID_RANGE: "Intervalo de datas inválido.",
+  ANALYTICS_RANGE_TOO_LARGE: "Intervalo de datas grande demais.",
+  CONFLICT: "A operação conflita com o estado atual. Recarregue e tente de novo.",
+  CONCURRENT_MODIFICATION: "O item foi alterado em outro lugar. Recarregue e tente de novo.",
+  UPSTREAM_UNAVAILABLE: "Banco de dados indisponível no momento. Tente novamente em instantes.",
+  INTERNAL_ERROR: "Erro inesperado no servidor.",
 };
 
 export function describeApiError(err: unknown): string {

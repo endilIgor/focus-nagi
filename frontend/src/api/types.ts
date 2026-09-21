@@ -1,5 +1,5 @@
-// Mirrors the backend DTOs/enums in com.focusnagi.* exactly (field names, nullability).
-// Do not add fields here that the API does not actually return.
+// Mirrors the Worker API responses (worker/src/routes + supabase/migrations) exactly
+// (field names, nullability). Do not add fields here that the API does not actually return.
 
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
@@ -28,16 +28,10 @@ export interface Page<T> {
   empty: boolean;
 }
 
+/** Identity behind the verified Supabase access token (GET /api/auth/me). */
 export interface OwnerResponse {
-  id: number;
-  username: string;
-  createdAt: string;
-}
-
-export interface CsrfResponse {
-  headerName: string;
-  parameterName: string;
-  token: string;
+  id: string;
+  email: string | null;
 }
 
 export interface SubtaskResponse {
@@ -289,6 +283,6 @@ export interface HourFocusResponse {
 
 export interface ProjectFocusBreakdownResponse {
   projectId: number | null;
-  title: string;
+  title: string | null;
   focusedMinutes: number;
 }

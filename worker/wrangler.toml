@@ -1,0 +1,20 @@
+# Cloudflare Worker for the Focus Nagi API.
+# Secrets (never committed) are set with `wrangler secret put <NAME>`:
+#   SUPABASE_URL, SUPABASE_ANON_KEY, ALLOWED_USER_IDS and, only for projects that
+#   still sign tokens with the legacy shared secret, SUPABASE_JWT_SECRET.
+# Local development reads the same names from worker/.dev.vars (see .dev.vars.example).
+name = "focus-nagi-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+workers_dev = true
+preview_urls = false
+
+[vars]
+# IANA time zone used for day/week/month boundaries (analytics, goals, journal).
+APP_TIME_ZONE = "UTC"
+# Comma-separated browser origins allowed to call the API cross-origin.
+# Leave empty when the frontend reaches the Worker through the Vercel /api rewrite.
+CORS_ALLOWED_ORIGINS = ""
+
+[observability]
+enabled = true

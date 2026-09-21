@@ -1,4 +1,5 @@
-import type { ApiError, CsrfResponse } from "./types";
+import { getAccessToken, refreshAccessToken } from "./supabase";
+import type { ApiError } from "./types";
 
 export class ApiRequestError extends Error {
   readonly status: number;
@@ -18,46 +19,8 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   unauthorizedHandler = handler;
 }
 
-let csrfToken: string | null = null;
-let csrfTokenPromise: Promise<string> | null = null;
-
-/**
- * Spring Security's XorCsrfTokenRequestAttributeHandler only accepts the masked token
- * served by GET /api/auth/csrf; the raw XSRF-TOKEN cookie value is rejected with 403.
- * The header value is therefore always sourced from the endpoint and cached per page load.
- */
-async function fetchCsrfToken(): Promise<string> {
-  const response = await fetch("/api/auth/csrf", { credentials: "include" });
-  if (!response.ok) {
-    throw new ApiRequestError(response.status, null);
-  }
-  const body = (await response.json()) as CsrfResponse;
-  csrfToken = body.token;
-  return body.token;
-}
-
-function ensureCsrfToken(): Promise<string> {
-  if (csrfToken) return Promise.resolve(csrfToken);
-  if (!csrfTokenPromise) {
-    csrfTokenPromise = fetchCsrfToken().finally(() => {
-      csrfTokenPromise = null;
-    });
-  }
-  return csrfTokenPromise;
-}
-
-/**
- * Re-syncs the CSRF token after authentication events (login, logout, password change):
- * the underlying token may rotate server-side, invalidating the cached value. A failed
- * sync leaves the cache empty, so the next mutating request retries instead of reusing
- * a stale token.
- */
-export function refreshCsrfToken(): Promise<string> {
-  csrfToken = null;
-  return ensureCsrfToken();
-}
-
-const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+/** Optional absolute API origin for cross-origin deployments; empty keeps same-origin /api URLs. */
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 interface RequestOptions {
   method?: string;
@@ -76,28 +39,37 @@ function buildQuery(query?: RequestOptions["query"]): string {
   return qs ? `?${qs}` : "";
 }
 
-/** Low-level request helper shared by every domain API module. Handles CSRF, credentials,
- * JSON (de)serialization, and mapping non-2xx responses to ApiRequestError. */
+function parseBody(text: string): unknown {
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Low-level request helper shared by every domain API module. Attaches the Supabase access token
+ * as a Bearer credential, retries once with a refreshed token after a 401, and maps non-2xx
+ * responses to ApiRequestError. */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const method = options.method ?? "GET";
-  const headers: Record<string, string> = {};
-  let body: string | undefined;
+  const url = API_BASE_URL + path + buildQuery(options.query);
+  const body = options.body !== undefined ? JSON.stringify(options.body) : undefined;
 
-  if (options.body !== undefined) {
-    headers["Content-Type"] = "application/json";
-    body = JSON.stringify(options.body);
+  const send = (token: string | null) => {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return fetch(url, { method, headers, body, credentials: "omit" });
+  };
+
+  const token = await getAccessToken();
+  let response = await send(token);
+
+  if (response.status === 401 && token) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) response = await send(refreshed);
   }
-
-  if (MUTATING_METHODS.has(method)) {
-    headers["X-XSRF-TOKEN"] = await ensureCsrfToken();
-  }
-
-  const response = await fetch(path + buildQuery(options.query), {
-    method,
-    headers,
-    body,
-    credentials: "include",
-  });
 
   if (response.status === 401) {
     unauthorizedHandler?.();
@@ -107,11 +79,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     return undefined as T;
   }
 
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : undefined;
+  const data = parseBody(await response.text());
 
   if (!response.ok) {
-    throw new ApiRequestError(response.status, data as ApiError | null);
+    const envelope = data && typeof data === "object" && "code" in data ? (data as ApiError) : null;
+    throw new ApiRequestError(response.status, envelope);
   }
 
   return data as T;

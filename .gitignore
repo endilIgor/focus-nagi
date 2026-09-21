@@ -1,37 +1,30 @@
-# Java / Maven
-target/
-*.class
-*.jar
-!.mvn/wrapper/maven-wrapper.jar
-*.war
-
-# IDEs
-.idea/
-*.iml
-.vscode/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
+# Dependencies & build output
+node_modules/
+dist/
+.wrangler/
+.vercel/
+*.tsbuildinfo
 
 # Env / secrets — never commit real environment files
 .env
 .env.*
 !.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+supabase/.temp/
+supabase/.branches/
+
+# Legacy data exports contain personal data
+migration-data/
+
+# IDEs / OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
-
-# Test artifacts
-test-output/
-
-# Frontend (Vite + React) — build output is generated into src/main/resources/static
-frontend/node_modules/
-frontend/node/
-frontend/dist/
-frontend/.vite/
-frontend/*.tsbuildinfo
-src/main/resources/static/

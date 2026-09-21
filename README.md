@@ -1,205 +1,295 @@
 # Focus Nagi
 
-Aplicação pessoal single-user de foco e produtividade (pomodoro, tarefas, projetos, metas, notas,
-diário e analytics). Backend Java + Spring Boot + PostgreSQL, com um frontend React (Vite) servido
-pelo próprio Spring Boot na mesma origem — um único processo, uma única porta.
+Aplicação pessoal single-owner de foco e produtividade (pomodoro, tarefas, projetos, metas, notas,
+diário e analytics).
 
-## Stack
+## Arquitetura
 
-- Java 21, Spring Boot 3.5 (Web, Validation, Data JPA, Security, Actuator)
-- PostgreSQL 16, Flyway (`ddl-auto=validate`), Spring Data JPA
-- Sessão server-side com cookie HttpOnly + CSRF (CookieCsrfTokenRepository)
-- springdoc-openapi (Swagger UI), Spotless (google-java-format)
-- Testes: JUnit 5, Testcontainers PostgreSQL (nunca H2), MockMvc
-- Frontend: React 18 + TypeScript + Vite, TanStack Query, React Router (ver [`frontend/`](frontend))
-- Docker multi-stage (usuário não-root) + Docker Compose
+```
+Navegador ──► Vercel (SPA React/Vite, Hobby)
+   │            └── /api/*  ──rewrite──► Cloudflare Worker (Hono, TypeScript)
+   │                                        │  valida o JWT do Supabase (JWKS)
+   │                                        └──► Supabase PostgREST /rest/v1/rpc/api_*
+   │                                              (anon key + JWT do usuário ⇒ RLS)
+   └── login/refresh/logout ──► Supabase Auth
+```
+
+- **Frontend** (`frontend/`): React 18 + TypeScript + Vite, TanStack Query, React Router. Autentica
+  com Supabase Auth (`@supabase/supabase-js`, sessão persistida e renovada automaticamente) e chama a
+  API em URLs relativas `/api/...` com `Authorization: Bearer <access token>`.
+- **API** (`worker/`): Cloudflare Worker em TypeScript estrito com Hono. Verifica o JWT localmente
+  (JWKS do projeto; segredo HS256 legado opcional), aplica allowlist do owner, valida entrada (zod),
+  adiciona headers de segurança e chama **uma** função SQL por operação via PostgREST, repassando o
+  JWT do próprio usuário. Nunca usa a `service_role`.
+- **Banco/Auth** (`supabase/`): PostgreSQL do Supabase com migrations idempotentes. Toda tabela tem
+  `user_id` → `auth.users`, RLS habilitado e políticas `user_id = auth.uid()`. Clientes
+  autenticados não recebem acesso direto às tabelas: só podem executar funções `public.api_*`
+  `SECURITY DEFINER`, com `search_path` vazio e escopo explícito por `auth.uid()`. Assim, cada
+  operação é atômica e as regras do Worker não podem ser contornadas pela Data API do Supabase.
+- **Migração de dados** (`scripts/migrate-data/`): exporta o PostgreSQL legado (VPS) e importa no
+  Supabase preservando IDs e relacionamentos.
+
+O backend Spring Boot/Maven/Docker anterior foi removido; suas migrations Flyway (V1..V8) foram
+traduzidas para `supabase/migrations` e continuam disponíveis no histórico do git.
 
 ## Estrutura
 
-Organização por feature em `src/main/java/com/focusnagi/`:
-
-- `auth/` — owner, login/logout/me/troca de senha, rate limiting de login
-- `project/`, `task/` (com subtasks), `focus/`, `goal/`, `note/`, `journal/`
-- `analytics/` — agregações (summary, streaks, heatmap, by-day/week/month/hour/project)
-- `today/` — projeção compacta do dia
-- `config/`, `common/` — segurança, erros, relógio/timezone, forwarding da SPA
-
-Controllers finos; regras em services/entities; DTOs de entrada/saída (nunca serializa entidades
-JPA); agregações no banco (SQL nativo com `AT TIME ZONE` para os buckets de analytics).
-
-`frontend/` contém a SPA (React + Vite); o build de produção é gerado em
-`src/main/resources/static` (gitignored — artefato de build, não fonte) e servido pelo Spring Boot
-como recurso estático. Ver [## Frontend](#frontend) abaixo.
-
-## Requisitos
-
-- JDK 21 e Docker (para Testcontainers e Compose)
-- Node.js 22.12+ apenas para desenvolvimento do frontend fora do Maven/Docker (o build de produção
-  baixa seu próprio Node via `frontend-maven-plugin`, não precisa de Node instalado no host/CI)
-
-## Executar
-
-```bash
-cp .env.example .env   # preencha APP_OWNER_PASSWORD e POSTGRES_PASSWORD
-docker compose up --build
+```
+frontend/                 SPA (Vite) + scripts/vercel-output.mjs (config do Vercel) + vercel.json
+worker/                   Worker (src/routes/*, auth, db, validation) + testes (vitest + PGlite)
+supabase/migrations/      schema, RLS/grants, funções api_* (projetos, tarefas, foco, metas,
+                          notas/diário, today/analytics)
+supabase/config.toml      config do Supabase CLI (signup público desabilitado)
+scripts/migrate-data/     export-legacy.sh, import-supabase.sh, staging/transform/verify.sql
 ```
 
-Isso builda o frontend (`frontend/` → `src/main/resources/static`) e o backend na mesma imagem.
-App completo (UI + API) em `http://localhost:8080`, Swagger em `/swagger-ui` (desabilitado por
-padrão; ative com `APP_SWAGGER_ENABLED=true` ou rode com o profile `dev`).
+## Desenvolvimento local
 
-Sem Docker (dev local): suba um PostgreSQL qualquer e ajuste `APP_DATABASE_URL`,
-`APP_DATABASE_USER`, `APP_DATABASE_PASSWORD`, ou rode só o banco:
+Requisitos: Node.js 22+. Um projeto Supabase de desenvolvimento (hosted Free, ou `npx supabase start`
+com Docker) com as migrations aplicadas e um usuário criado (ver [Deploy](#deploy-passo-a-passo)).
 
 ```bash
-docker compose up db
-APP_OWNER_PASSWORD=dev-secret ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
+# API (http://127.0.0.1:8787)
+cd worker
+npm ci
+cp .dev.vars.example .dev.vars   # preencha SUPABASE_URL, SUPABASE_ANON_KEY, ALLOWED_USER_IDS
+npm run dev
 
-## Frontend
-
-SPA em `frontend/` (React 18 + TypeScript + Vite). Fala com a API existente via `fetch` com
-`credentials: "include"`, replica o fluxo de sessão/CSRF do backend (busca o token em
-`GET /api/auth/csrf`, envia `X-XSRF-TOKEN` em toda mutação) e usa TanStack Query para cache/estado
-de servidor e React Router para as 8 telas (Hoje, Foco, Tarefas, Projetos, Metas, Notas, Diário,
-Analytics) mais o login.
-
-### Desenvolvimento
-
-```bash
+# Frontend (http://localhost:5173; /api é proxied para :8787)
 cd frontend
-npm install
-npm run dev          # http://localhost:5173, proxy de /api e /actuator para :8080
+npm ci
+cp .env.example .env.local       # preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY
+npm run dev
 ```
 
-Rode a API em paralelo (`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev` ou
-`docker compose up db api`) para o proxy do Vite funcionar.
+Com `supabase start` local, `CORS_ALLOWED_ORIGINS` pode ficar vazio: o Vite faz proxy de `/api`.
 
-### Build e integração com o backend
+## Testes e checks
 
 ```bash
-npm run build         # emite direto em ../src/main/resources/static (emptyOutDir)
-npm run typecheck     # tsc -b --noEmit
-npm test              # vitest run
+cd worker
+npm run check        # typecheck + eslint + vitest + wrangler deploy --dry-run
+cd ../frontend
+npm test && npm run typecheck && npm run build
 ```
 
-`./mvnw package` (e portanto o `Dockerfile`) já builda o frontend automaticamente via
-`frontend-maven-plugin`, executado na fase `generate-resources` antes dos recursos do Spring Boot
-serem processados — o jar final contém a UI compilada em `BOOT-INF/classes/static/`. Para iterar
-só no backend sem precisar de Node, pule o frontend:
+Os testes do Worker sobem um PostgreSQL real em processo (PGlite) com um shim mínimo do Supabase
+(`worker/test/support/supabase-shim.sql`: roles `anon`/`authenticated`, `auth.users`, `auth.uid()`),
+aplicam **todas** as migrations e exercitam as rotas HTTP ponta a ponta sob RLS. Cobrem: contrato de
+todos os endpoints legados, sucesso/erro de cada endpoint, transições de estado, limites de
+analytics por timezone (relógio controlável via `app.now`), isolamento entre usuários (RLS e FKs
+compostas), idempotência das migrations, verificação de JWT (ES256/JWKS, HS256 legado, expirado,
+issuer/audience/role errados), transporte PostgREST e o script de migração de dados.
+
+CI (`.github/workflows/ci.yml`) roda os checks do Worker, do frontend e a sintaxe dos scripts shell.
+
+## Deploy passo a passo
+
+Nada neste repositório contém URLs de conta, chaves ou senhas: tudo abaixo é configurado nos
+painéis/CLIs de cada serviço.
+
+### 1. Supabase
+
+1. Crie um projeto (plano Free) em <https://supabase.com/dashboard>. Anote o **Project URL**, a
+   **anon/publishable key** (pública) e a senha do banco (fica só com você).
+2. **Authentication → Sign In / Providers**:
+   - desative **Allow new users to sign up** (não existe cadastro público);
+   - desative **anonymous sign-ins**; mantenha o provider **Email** ativo;
+   - em Email, ative **Secure password change**.
+3. **Authentication → URL Configuration**: `Site URL` = domínio do frontend no Vercel.
+4. Aplique as migrations (em ordem; são idempotentes):
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <project-ref>
+   npx supabase db push
+   ```
+   Alternativa sem CLI: cole cada arquivo de `supabase/migrations/` no **SQL Editor**, em ordem.
+5. Crie o único usuário: **Authentication → Users → Add user → Create new user**, informe e-mail e
+   uma senha forte e marque **Auto Confirm User**. Copie o **User UID** (UUID) — ele vai para
+   `ALLOWED_USER_IDS` e para a importação de dados.
+6. **Project Settings → Data API**: mantenha apenas o schema `public` exposto. `anon` e
+   `authenticated` não têm acesso direto às tabelas; somente as funções `api_*` podem ser executadas
+   por usuários autenticados.
+
+### 2. Cloudflare Worker
 
 ```bash
-./mvnw test -Dskip.frontend=true
+cd worker
+npm ci
+npx wrangler login
+npx wrangler secret put SUPABASE_URL          # https://<project-ref>.supabase.co
+npx wrangler secret put SUPABASE_ANON_KEY     # anon/publishable key (NUNCA a service_role)
+npx wrangler secret put ALLOWED_USER_IDS      # UUID do owner (vários: separados por vírgula)
+# Somente se o projeto ainda assina JWTs com o segredo HS256 legado:
+# npx wrangler secret put SUPABASE_JWT_SECRET
+npm run deploy
+curl https://focus-nagi-api.<sua-conta>.workers.dev/api/health   # {"status":"UP"}
 ```
 
-`src/main/resources/static/` é gerado (gitignored); nunca edite os arquivos ali, edite
-`frontend/src/`.
-
-### Rotas públicas vs. autenticadas
-
-O shell da SPA (`/`, `/index.html`, `/assets/**` e as rotas de tela como `/tarefas`) é público no
-`SecurityConfig` — sem isso o navegador não conseguiria carregar nem a própria tela de login. Um
-`SpaForwardingController` encaminha carregamentos diretos/refresh dessas rotas para `index.html`
-(React Router assume o roteamento client-side a partir daí). Todos os dados continuam atrás de
-`/api/**`, protegido por sessão + CSRF como antes.
-
-### Decisões e limitações conscientes do frontend
-
-- O design original (protótipo Claude Design) tinha um medidor de "nível/XP" e um "log do
-  sistema" puramente decorativos, sem contraparte na API (nenhuma entidade de XP, nenhum endpoint
-  de log de auditoria). Para não fabricar dados falsos, esses dois elementos foram removidos; o
-  selo "+XP" nas tarefas foi mantido porque é só um rótulo estético sobre `estimatedMinutes`, um
-  campo real.
-- O filtro "DADOS: CHEIO/INÍCIO" do protótipo alternava entre dados mockados cheios e vazios — era
-  um recurso da ferramenta de design, não da aplicação; não existe no frontend final.
-- A escolha de paleta de cores (4 temas) é uma preferência 100% client-side (`localStorage`), sem
-  endpoint de preferências no backend — comportamento equivalente a um dark-mode toggle comum.
-- No painel "Vincular" da tela de Foco, a tarefa/projeto/notas só podem ser definidos ao *iniciar*
-  uma sessão (é o que `POST /api/focus-sessions` aceita); enquanto a sessão está ativa esses campos
-  aparecem como somente leitura, porque a API não expõe um jeito de alterá-los depois.
-
-## Testes
-
-```bash
-./mvnw verify        # testes (Testcontainers/PostgreSQL) + spotless:check + package + build do frontend
-./mvnw test
-./mvnw spotless:apply
-
-cd frontend && npm test && npm run typecheck
-```
-
-## Variáveis de ambiente
+Variáveis não secretas ficam em `worker/wrangler.toml` (`[vars]`):
 
 | Variável | Default | Descrição |
 |---|---|---|
-| `APP_OWNER_PASSWORD` | (vazio; obrigatória no primeiro boot) | senha inicial do owner (seed idempotente, BCrypt) |
-| `APP_OWNER_USERNAME` | `owner` | username do owner |
-| `POSTGRES_DB/USER/PASSWORD` | `focusnagi` / `focusnagi` / `focusnagi` | banco criado pelo Docker Compose; use senha forte fora do desenvolvimento local |
-| `POSTGRES_PORT` | `5432` | porta PostgreSQL publicada pelo Docker Compose |
-| `APP_DATABASE_URL/USER/PASSWORD` | `jdbc:postgresql://localhost:5432/focusnagi` / `focusnagi` | datasource |
-| `APP_TIME_ZONE` | `UTC` | timezone dos limites de dia/semana/mês (analytics, metas, diário) |
-| `APP_CORS_ALLOWED_ORIGINS` | vazio (mesma origem) | origins separadas por vírgula; nunca combinado com wildcard+credentials |
-| `APP_COOKIE_SECURE` | `false` | `true` quando servir via HTTPS |
-| `APP_SESSION_TIMEOUT` | `12h` | timeout da sessão |
-| `APP_LOGIN_MAX_FAILURES` / `APP_LOGIN_LOCK_MINUTES` | `5` / `5` | trava conservadora anti brute-force (em memória, por instância) |
-| `APP_SWAGGER_ENABLED` | `false` | expõe Swagger UI/OpenAPI sem autenticação |
-| `APP_PORT` | `8080` | porta |
+| `APP_TIME_ZONE` | `UTC` | timezone IANA dos limites de dia/semana/mês (analytics, metas, diário) — ex.: `America/Sao_Paulo` |
+| `CORS_ALLOWED_ORIGINS` | vazio | origens exatas separadas por vírgula; vazio = sem CORS (acesso via rewrite same-origin). Entradas com `*` são ignoradas; credenciais nunca são permitidas |
 
-## Autenticação, cookies e CSRF
+Secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ALLOWED_USER_IDS` (recomendado; vazio = qualquer
+usuário válido do projeto, isolado por RLS), `SUPABASE_JWT_SECRET` (opcional, legado).
 
-- Login por sessão server-side: cookie `FOCUS_SESSION` (HttpOnly; `Secure` com
-  `APP_COOKIE_SECURE=true`; SameSite=Lax). Não há cadastro, roles ou multi-user: existe apenas um
-  owner, criado via seed no primeiro boot.
-- Endpoints privados exigem a sessão (401 `UNAUTHENTICATED` caso contrário). Respostas de erro
-  seguem `{"code","message","timestamp"}` sem detalhes internos.
-- Toda mutação exige CSRF: obtenha o token em `GET /api/auth/csrf` (cookie `XSRF-TOKEN` + header
-  `X-XSRF-TOKEN`).
+### 3. Vercel (frontend)
+
+1. **Add New → Project**, importe o repositório e defina **Root Directory = `frontend`**.
+   `frontend/vercel.json` já define `framework: null`, `installCommand` e
+   `buildCommand: npm run build:vercel`.
+2. **Settings → Environment Variables** (Production e Preview):
+
+   | Variável | Valor |
+   |---|---|
+   | `VITE_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | anon/publishable key |
+   | `API_ORIGIN` | origem do Worker, ex. `https://focus-nagi-api.<sua-conta>.workers.dev` (sem path e sem `/` final) |
+
+3. Deploy. O build roda `vite build` e depois `node scripts/vercel-output.mjs`, que gera
+   `.vercel/output` (Build Output API v3) com:
+   - `/api/*` → rewrite (proxy) para `${API_ORIGIN}/api/*` — o navegador continua em URLs relativas;
+   - arquivos estáticos, depois fallback SPA para `index.html` (rotas `/hoje`, `/tarefas`, ...);
+   - headers de segurança (CSP com `connect-src` limitado ao Supabase, `frame-ancestors 'none'`,
+     `nosniff`, HSTS) e cache imutável para `/assets/*`.
+
+   **Por que um script?** `vercel.json` não interpola variáveis de ambiente em rewrites. Gerar a
+   config no build mantém o hostname fora do git e falha o build (fail-closed) se `API_ORIGIN`
+   estiver ausente, sem https, ou com path/credenciais. A lógica é testada em
+   `frontend/scripts/vercel-output.test.ts`.
+
+   Alternativa sem proxy: defina `VITE_API_BASE_URL` com a origem do Worker e
+   `CORS_ALLOWED_ORIGINS` no Worker com o domínio do Vercel.
+
+### 4. Domínios próprios (opcional)
+
+- Frontend: **Vercel → Settings → Domains**. Atualize o `Site URL` do Supabase Auth.
+- API: **Cloudflare → Workers → focus-nagi-api → Settings → Domains & Routes → Custom Domain**
+  (ex. `api.seudominio.com`). Atualize `API_ORIGIN` no Vercel e faça redeploy. Opcionalmente
+  `workers_dev = false` em `wrangler.toml` para desligar o subdomínio `workers.dev`.
+
+### 5. Migrar os dados do VPS
+
+Faça numa janela sem uso do app (o app antigo deve parar de receber escritas).
 
 ```bash
-# 1) pega o token CSRF
-CSRF=$(curl -s -c /tmp/jar -b /tmp/jar http://localhost:8080/api/auth/csrf)
-TOKEN=$(echo "$CSRF" | jq -r .token)
+# 1) no VPS (ou com acesso ao Postgres legado): congele escritas e exporte
+docker compose stop api                                   # no checkout antigo; o banco continua de pé
+export PGPASSWORD=...                                     # senha do Postgres legado (não versionar)
+LEGACY_DATABASE_URL=postgresql://focusnagi@localhost:5432/focusnagi \
+  scripts/migrate-data/export-legacy.sh migration-data    # CSVs + legacy-counts.txt (dados pessoais!)
 
-# 2) login (cookie de sessão fica no /tmp/jar)
-curl -s -c /tmp/jar -b /tmp/jar -H "Content-Type: application/json" \
-  -H "X-XSRF-TOKEN: $TOKEN" \
-  -d '{"username":"owner","password":"'"$APP_OWNER_PASSWORD"'"}' \
-  http://localhost:8080/api/auth/login
+# 2) importe no Supabase (única etapa privilegiada; usa a senha do banco, não a service_role)
+export PGPASSWORD=...                                     # senha do banco Supabase
+SUPABASE_DB_URL='postgresql://postgres.<project-ref>@<pooler-host>:5432/postgres' \
+OWNER_USER_ID=<UUID do passo 1.5> \
+  scripts/migrate-data/import-supabase.sh migration-data
 
-# 3) chamadas autenticadas (sempre com o header CSRF em mutações)
-curl -s -b /tmp/jar http://localhost:8080/api/auth/me
-curl -s -b /tmp/jar http://localhost:8080/api/today
-curl -s -c /tmp/jar -b /tmp/jar -H "Content-Type: application/json" \
-  -H "X-XSRF-TOKEN: $TOKEN" \
-  -d '{"plannedFocusMinutes":25,"plannedBreakMinutes":5}' \
-  http://localhost:8080/api/focus-sessions
+# 3) confira (compare com migration-data/legacy-counts.txt)
+psql "$SUPABASE_DB_URL" -v owner_id=<UUID> -f scripts/migrate-data/verify.sql
 ```
+
+A connection string (session pooler ou direta) está em **Project Settings → Database → Connect**.
+
+- Tudo roda numa única transação: IDs são preservados (todas as FKs continuam válidas), cada linha
+  recebe `user_id = OWNER_USER_ID`, as sequências de identidade avançam além do maior ID importado e
+  as contagens são conferidas; qualquer divergência faz rollback. O script recusa rodar se as tabelas
+  de destino já tiverem dados.
+- A tabela legada `owner` (username + hash BCrypt) **não** é migrada: o login passa a ser o usuário
+  do Supabase Auth criado no passo 1.5, mapeado via `OWNER_USER_ID`.
+- `verify.sql` mostra contagens por tabela, linhas de outros donos (esperado 0), sessões ativas
+  (0 ou 1), constraints não validadas (nenhuma), RLS por tabela e o próximo ID de cada sequência.
+- Apague `migration-data/` (gitignored) depois de validar.
+
+### 6. Rollback
+
+- **Frontend**: Vercel → Deployments → **Instant Rollback** para o deploy anterior.
+- **Worker**: `npx wrangler deployments list` e `npx wrangler rollback [<version-id>]`.
+- **Banco**: migrations são forward-only e idempotentes; corrija com uma nova migration. Antes de
+  mudanças de schema faça um dump: `npx supabase db dump --data-only -f backup.sql` (ou `pg_dump`).
+- **Voltar ao VPS**: mantenha o stack antigo parado (não removido) e o export até confiar na nova
+  stack. Dados criados depois do corte existem só no Supabase — não há script de migração reversa;
+  exporte-os com `pg_dump` antes de voltar.
+
+## Limites dos planos gratuitos (confira as páginas de preço atuais)
+
+- **Supabase Free**: projeto é **pausado após ~7 dias sem atividade** (reative no dashboard; o uso
+  normal do app evita a pausa); ~500 MB de banco; **sem backups automáticos acessíveis** — faça
+  dumps periódicos (`supabase db dump` / `pg_dump`) e guarde fora do projeto; limite de 2 projetos
+  ativos. Rate limits do Supabase Auth protegem o login contra força bruta.
+- **Cloudflare Workers Free**: 100.000 requisições/dia, 10 ms de CPU por requisição (o Worker faz
+  apenas verificação de JWT + 1 subrequest ao PostgREST por chamada; o JWKS fica em cache), 50
+  subrequests por invocação. O mesmo código roda no Workers Paid sem mudanças.
+- **Vercel Hobby**: uso pessoal/não comercial; limites de banda e de invocações — o rewrite `/api`
+  é um proxy de edge, não uma função serverless.
+
+## API
+
+Mesmo contrato do backend anterior (paths, verbos, corpos, paginação estilo Spring `Page`,
+status HTTP e códigos de erro), agora com `Authorization: Bearer <access token do Supabase>` em
+todas as rotas exceto `GET /api/health`. Erros: `{"code","message","timestamp"}` sem detalhes
+internos.
+
+| Recurso | Endpoints |
+|---|---|
+| Auth | `GET /api/auth/me` → `{id, email}` |
+| Projetos | `POST/GET /api/projects`, `GET/PATCH /api/projects/{id}`, `POST .../{id}/complete\|archive\|restore`, `GET .../{id}/focus`, `GET .../{id}/tasks` |
+| Tarefas | `POST/GET /api/tasks`, `GET/PATCH/DELETE /api/tasks/{id}`, `POST .../{id}/start\|complete\|reopen\|cancel`, `POST .../{id}/subtasks`, `POST .../{id}/subtasks/{sid}/complete\|reopen`, `DELETE .../{id}/subtasks/{sid}` |
+| Foco | `POST/GET /api/focus-sessions`, `GET .../current` (204 sem sessão), `POST .../{id}/pause\|resume\|finish\|cancel` |
+| Metas | `POST/GET /api/goals`, `GET/PATCH /api/goals/{id}`, `POST .../{id}/complete\|archive\|restore`, `GET .../{id}/progress` |
+| Notas | `POST/GET /api/notes` (`pinned`, `projectId`, `q`), `GET/PATCH/DELETE /api/notes/{id}`, `POST .../{id}/pin\|unpin` |
+| Diário | `POST /api/journal`, `GET /api/journal?date=`, `GET .../range?from=&to=`, `GET .../recent`, `PATCH/DELETE /api/journal/{id}` |
+| Hoje | `GET /api/today` |
+| Analytics | `GET /api/analytics/focus/summary?period=TODAY\|WEEK\|MONTH`, `.../streaks`, `.../heatmap?from=&to=`, `.../focus/by-day\|by-week\|by-month\|by-hour`, `.../focus/by-project` |
+
+Mudanças intencionais de contrato:
+
+- `POST /api/auth/login|logout|password` e `GET /api/auth/csrf` foram removidos: login, logout,
+  refresh e troca de senha são feitos pelo Supabase Auth no navegador (a troca de senha re-verifica
+  a senha atual). Não há cookies nem CSRF — o token vai no header `Authorization`.
+- O login usa **e-mail** (Supabase Auth) em vez de username.
+- `GET /api/auth/me` retorna `{id: uuid, email}`.
+- Campos nulos são serializados como `null` (antes eram omitidos).
+- `notes` enviado ao iniciar uma sessão de foco agora é persistido.
+- Parâmetros obrigatórios ausentes retornam 400 `VALIDATION_ERROR` (antes 500); corpo acima de 1 MB
+  retorna 413 `PAYLOAD_TOO_LARGE`; títulos em branco em PATCH são rejeitados.
+
+## Segurança
+
+- Sem cadastro público: signup desabilitado no Supabase Auth, nenhuma chamada `signUp` no app e
+  allowlist `ALLOWED_USER_IDS` no Worker (403 `ACCESS_DENIED` para qualquer outro usuário).
+- A `service_role` não é usada em lugar nenhum; o frontend recusa inicializar com uma chave
+  `service_role`/`sb_secret_`.
+- Defesa em profundidade: o Worker verifica o JWT (issuer, audience `authenticated`, role, expiração);
+  o PostgREST verifica de novo; clientes autenticados têm `EXECUTE` apenas nas funções `api_*`, sem
+  acesso direto às tabelas; as funções usam `SECURITY DEFINER`, `search_path` vazio e filtram por
+  `auth.uid()` explicitamente; RLS e FKs compostas `(id, user_id)` permanecem como backstops.
+- Busca de notas usa `LIKE` com escape e parâmetros; nenhum SQL é montado com entrada do usuário.
+- `app.now` (override de relógio) só pode ser definido por uma sessão direta no banco (testes/manutenção);
+  clientes PostgREST não conseguem alterá-lo.
 
 ## Semântica de tempo e analytics
 
-- Timestamps persistidos como `Instant` (UTC); datas conceituais como `LocalDate`.
+- Timestamps em `timestamptz` (UTC, serializados como ISO-8601 com `Z`); datas conceituais como `date`.
 - Limites de dia/semana/mês usam `APP_TIME_ZONE`. Semana começa na segunda (ISO).
-- `focusedMinutes` = `actualFocusSeconds / 60` (arredondamento para baixo). Apenas sessões
-  `COMPLETED` contam; `CANCELLED` é ignorada. Duração é calculada sempre no servidor (relógio
-  injetável, ignorando o relógio do cliente); pausas são descontadas via `paused_seconds_accum`.
-- Streak: dias consecutivos (no timezone do app) com pelo menos 1 segundo de foco efetivo. O
-  streak atual termina hoje, ou ontem se hoje ainda não tiver foco (o dia não acabou).
-- Uma única sessão ativa (`RUNNING`/`PAUSED`) por vez, garantida por índice único parcial do
-  PostgreSQL além da checagem na aplicação.
-- Heatmap e `focus/by-day` incluem dias com zero; heatmap limita o intervalo a 366 dias.
+- `focusedMinutes` = segundos / 60 (arredondado para baixo) por bucket. Apenas sessões `COMPLETED`
+  contam. Duração é sempre calculada com o relógio do servidor; pausas são descontadas via
+  `paused_seconds_accum`.
+- Streak: dias consecutivos com foco > 0; o atual termina hoje, ou ontem se hoje ainda não tiver foco.
+- No máximo uma sessão `RUNNING`/`PAUSED` por usuário (checagem + índice único parcial; transições
+  com `SELECT ... FOR UPDATE`).
+- Heatmap e `focus/by-day` incluem dias com zero; heatmap limita a 366 dias, by-week a 372 dias,
+  by-month a 5 anos.
 
-## Migrations
+## Decisões e limitações conscientes do frontend
 
-Toda mudança de schema é uma migration versionada em `src/main/resources/db/migration`
-(Flyway). Constraints `NOT NULL`, `UNIQUE`, FKs, CHECKs e índices (apenas com justificativa:
-filtros e analytics) vivem no SQL.
-
-## Limitações conhecidas
-
-- Rate limiting de login é em memória e por instância (não distribuído).
-- Sessões são in-memory (suficiente para uso single-user; reiniciar o servidor desloga).
-- Sem HTTPS embutido: termine TLS no proxy reverso e use `APP_COOKIE_SECURE=true`.
-- Em produção, defina valores aleatórios para `APP_OWNER_PASSWORD` e `POSTGRES_PASSWORD`; os
-  defaults previsíveis do Compose existem somente para facilitar desenvolvimento local.
-- Analytics: `AnalyticsPeriod` só tem `TODAY`/`WEEK`/`MONTH`; o frontend não oferece um filtro
-  "ALL" porque a API não o suporta.
+- O protótipo de design original tinha um medidor de "nível/XP" e um "log do sistema" puramente
+  decorativos, sem contraparte na API; foram removidos para não fabricar dados. O selo "+XP" nas
+  tarefas é só um rótulo estético sobre `estimatedMinutes`.
+- A escolha de paleta de cores (4 temas) é client-side (`localStorage`).
+- No painel "Vincular" da tela de Foco, tarefa/projeto/notas só podem ser definidos ao *iniciar* uma
+  sessão (é o que `POST /api/focus-sessions` aceita).
+- Analytics só suporta `TODAY`/`WEEK`/`MONTH`.

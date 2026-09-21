@@ -8,14 +8,15 @@ import styles from "./LoginPage.module.css";
 const ERROR_MESSAGES: Record<string, string> = {
   INVALID_CREDENTIALS: "Usuário ou senha incorretos.",
   LOGIN_LOCKED: "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
-  VALIDATION_ERROR: "Preencha usuário e senha.",
+  VALIDATION_ERROR: "Preencha e-mail e senha.",
+  ACCESS_DENIED: "Esta conta não tem acesso a este console.",
 };
 
 export function LoginPage() {
   const { login } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +26,7 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login({ username, password });
+      await login({ email, password });
       navigate("/hoje", { replace: true });
     } catch (err) {
       if (err instanceof ApiRequestError) {
@@ -88,12 +89,13 @@ export function LoginPage() {
 
             <div className={styles.form}>
               <label className="fn-field">
-                <span>USERNAME</span>
+                <span>E-MAIL</span>
                 <input
                   className="fn-input"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </label>
@@ -115,8 +117,8 @@ export function LoginPage() {
             </div>
 
             <div className={styles.footer}>
-              <span>COOKIE FOCUS_SESSION &middot; CSRF OK</span>
-              <span>TTL 12h</span>
+              <span>SUPABASE AUTH &middot; BEARER JWT</span>
+              <span>AUTO REFRESH</span>
             </div>
           </form>
         </div>

@@ -83,11 +83,14 @@ function renderPage() {
 describe("FocusPage session actions", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllGlobals();
     mockNow = Date.parse("2026-09-21T12:00:00Z");
     mockedApi.list.mockResolvedValue(EMPTY_PAGE);
   });
 
   it("finish updates controls immediately from the mutation response, without refetching the current session", async () => {
+    const audioContext = vi.fn();
+    vi.stubGlobal("AudioContext", audioContext);
     // The current-session endpoint keeps returning the stale RUNNING record,
     // so the UI can only update if the mutation response is written to cache.
     mockedApi.current.mockResolvedValue(session());
@@ -104,6 +107,8 @@ describe("FocusPage session actions", () => {
     expect(screen.queryByRole("button", { name: "Finalizar" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pausar" })).not.toBeInTheDocument();
     expect(screen.getByText("PRONTA")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(audioContext).not.toHaveBeenCalled();
     expect(mockedApi.current).toHaveBeenCalledTimes(1);
   });
 
@@ -251,57 +256,101 @@ describe("FocusPage current-session polling race", () => {
   });
 });
 
-describe("FocusPage one-minute countdown notice", () => {
+describe("FocusPage timer completion", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllGlobals();
     mockNow = Date.parse("2026-09-21T12:00:00Z");
     mockedApi.list.mockResolvedValue(EMPTY_PAGE);
   });
 
-  it("shows an accessible notice exactly once when the session crosses into the final minute", async () => {
+  it("automatically finishes the session at zero without showing overtime", async () => {
     const startedAt = "2026-09-21T12:00:00Z";
-    mockNow = Date.parse(startedAt) + (25 * 60 - 61) * 1000; // 61s remaining
+    mockNow = Date.parse(startedAt) + (25 * 60 - 1) * 1000;
     mockedApi.current.mockResolvedValue(session({ startedAt, plannedFocusMinutes: 25 }));
+    mockedApi.finish.mockImplementation(() => new Promise<FocusSessionResponse>(() => undefined));
 
     const { rerenderPage } = renderPage();
     await screen.findByRole("button", { name: "Finalizar" });
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
     act(() => {
-      mockNow += 1000; // 60s remaining — crossing
+      mockNow += 1000;
       rerenderPage();
     });
-    expect(screen.getByRole("alert")).toHaveTextContent(/resta 1 minuto/i);
-
-    // Further ticks inside the window do not stack duplicate notices.
+    await waitFor(() => expect(mockedApi.finish).toHaveBeenCalledWith(1));
     for (let i = 0; i < 3; i++) {
       act(() => {
         mockNow += 1000;
         rerenderPage();
       });
     }
-    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(mockedApi.finish).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("00:00")).toBeInTheDocument();
+    expect(screen.queryByText("TEMPO EXTRA")).not.toBeInTheDocument();
   });
 
-  it("hides the notice when the session is paused", async () => {
-    const startedAt = "2026-09-21T12:00:00Z";
-    mockNow = Date.parse(startedAt) + (25 * 60 - 61) * 1000; // 61s remaining
-    mockedApi.current.mockResolvedValue(session({ startedAt, plannedFocusMinutes: 25 }));
-    mockedApi.pause.mockResolvedValue(
-      session({ status: "PAUSED", pausedSecondsAccum: 1430, lastPausedAt: "2026-09-21T12:23:50Z" }),
+  it("shows a completion notification and sounds the alarm after an automatic finish", async () => {
+    const oscillatorStart = vi.fn();
+    class FakeAudioContext {
+      currentTime = 0;
+      destination = {};
+      state = "running";
+      resume = vi.fn().mockResolvedValue(undefined);
+      createGain = () => ({
+        gain: {
+          setValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      });
+      createOscillator = () => ({
+        type: "sine",
+        frequency: { setValueAtTime: vi.fn() },
+        connect: vi.fn(),
+        start: oscillatorStart,
+        stop: vi.fn(),
+      });
+    }
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    mockedApi.current.mockResolvedValue(undefined);
+    mockedApi.start.mockResolvedValue(session({ plannedFocusMinutes: 50 }));
+    mockedApi.finish.mockResolvedValue(
+      session({ status: "COMPLETED", endedAt: "2026-09-21T12:50:00Z", actualFocusSeconds: 3000 }),
     );
 
     const { rerenderPage } = renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: "Iniciar sessão" }));
     await screen.findByRole("button", { name: "Finalizar" });
 
     act(() => {
-      mockNow += 1000; // 60s remaining — notice appears
+      mockNow += 50 * 60 * 1000;
       rerenderPage();
     });
-    expect(screen.getByRole("alert")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Pausar" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "Retomar" })).toBeInTheDocument());
+    expect(await screen.findByRole("alert")).toHaveTextContent(/sessão de foco concluída/i);
+    expect(oscillatorStart).toHaveBeenCalled();
+  });
+
+  it("keeps a manual retry silent after automatic finish fails", async () => {
+    const audioContext = vi.fn();
+    vi.stubGlobal("AudioContext", audioContext);
+    mockedApi.current.mockResolvedValue(session());
+    mockedApi.finish
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(
+        session({ status: "COMPLETED", endedAt: "2026-09-21T12:25:00Z", actualFocusSeconds: 1500 }),
+      );
+    mockNow += 25 * 60 * 1000;
+
+    renderPage();
+    await waitFor(() => expect(mockedApi.finish).toHaveBeenCalledTimes(1));
+    await screen.findByText(/offline/i);
+
+    await userEvent.click(screen.getByRole("button", { name: "Finalizar" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Iniciar sessão" })).toBeInTheDocument());
+    expect(mockedApi.finish).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(audioContext).not.toHaveBeenCalled();
   });
 });

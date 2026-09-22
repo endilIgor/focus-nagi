@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { focusSessionsApi } from "../api/focusSessions";
 import { fetchAllContent } from "../api/pagination";
 import { projectsApi } from "../api/projects";
 import { tasksApi } from "../api/tasks";
 import { computeElapsedSeconds, CURRENT_FOCUS_SESSION_KEY, useCurrentFocusSession } from "../hooks/useFocusSession";
-import { useCountdownNotice } from "../hooks/useCountdownNotice";
 import { useClockTick } from "../hooks/useClock";
 import { useTheme } from "../theme/ThemeContext";
 import { describeApiError } from "../utils/errors";
 import { FOCUS_SESSION_STATUS_LABEL } from "../utils/labels";
+import { playTimerAlarm, primeTimerAlarm } from "../utils/timerAlarm";
 import type { FocusSessionResponse } from "../api/types";
 import styles from "./FocusPage.module.css";
 
@@ -34,7 +34,9 @@ export function FocusPage() {
   const [projectId, setProjectId] = useState<number | "">("");
   const [notes, setNotes] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [completionNotice, setCompletionNotice] = useState(false);
   const [historyPage, setHistoryPage] = useState(0);
+  const autoFinishedSessionId = useRef<number | null>(null);
 
   const sessionQuery = useCurrentFocusSession();
   const session = sessionQuery.data;
@@ -96,6 +98,7 @@ export function FocusPage() {
   function useSessionAction(
     fn: (id: number) => Promise<FocusSessionResponse>,
     clearsSession = false,
+    afterSuccess?: (data: FocusSessionResponse) => void,
   ) {
     return useMutation({
       mutationFn: () => fn(session!.id),
@@ -105,6 +108,7 @@ export function FocusPage() {
         setActionError(null);
         setCurrentSession(clearsSession ? null : data);
         invalidateAfterAction();
+        afterSuccess?.(data);
       },
       onError: (err: unknown) => setActionError(describeApiError(err)),
     });
@@ -112,7 +116,12 @@ export function FocusPage() {
 
   const pauseMutation = useSessionAction(focusSessionsApi.pause);
   const resumeMutation = useSessionAction(focusSessionsApi.resume);
-  const finishMutation = useSessionAction(focusSessionsApi.finish, true);
+  const finishMutation = useSessionAction(focusSessionsApi.finish, true, (data) => {
+    if (autoFinishedSessionId.current === data.id) {
+      setCompletionNotice(true);
+      void playTimerAlarm().catch(() => undefined);
+    }
+  });
   const cancelMutation = useSessionAction(focusSessionsApi.cancel, true);
   const sessionActionPending =
     pauseMutation.isPending ||
@@ -122,13 +131,22 @@ export function FocusPage() {
 
   const elapsedSeconds = session ? computeElapsedSeconds(session, now) : 0;
   const plannedSecondsActive = (session?.plannedFocusMinutes ?? plannedMinutes) * 60;
-  const remaining = plannedSecondsActive - elapsedSeconds;
-  const countdownNotice = useCountdownNotice(session, remaining);
+  const remaining = Math.max(0, plannedSecondsActive - elapsedSeconds);
   const prog = Math.min(1, elapsedSeconds / Math.max(1, plannedSecondsActive));
-  const overtime = remaining < 0;
-  const clockText = overtime
-    ? `+${pad(Math.floor(Math.abs(remaining) / 60))}:${pad(Math.abs(remaining) % 60)}`
-    : `${pad(Math.floor(remaining / 60))}:${pad(remaining % 60)}`;
+  const clockText = `${pad(Math.floor(remaining / 60))}:${pad(remaining % 60)}`;
+  const finishSession = finishMutation.mutate;
+
+  useEffect(() => {
+    if (
+      session?.status === "RUNNING" &&
+      remaining === 0 &&
+      autoFinishedSessionId.current !== session.id &&
+      !finishMutation.isPending
+    ) {
+      autoFinishedSessionId.current = session.id;
+      finishSession();
+    }
+  }, [session?.id, session?.status, remaining, finishMutation.isPending, finishSession]);
 
   const statusLabel = session?.status === "RUNNING" ? "EM EXECUÇÃO" : session?.status === "PAUSED" ? "PAUSADA" : "PRONTA";
   const circumference = 2 * Math.PI * 150;
@@ -170,7 +188,7 @@ export function FocusPage() {
           <div style={{ position: "absolute", textAlign: "center" }}>
             <div className={styles.clockText}>{active ? clockText : `${pad(plannedMinutes)}:00`}</div>
             <div className={styles.clockSub}>
-              {active ? (overtime ? "TEMPO EXTRA" : `RESTANTE · ${Math.round(prog * 100)}% CONCLUÍDO`) : "SELECIONE UM BLOCO E INICIE"}
+              {active ? (remaining === 0 ? "FINALIZANDO..." : `RESTANTE · ${Math.round(prog * 100)}% CONCLUÍDO`) : "SELECIONE UM BLOCO E INICIE"}
             </div>
             <div className={styles.ticks}>
               {Array.from({ length: 16 }, (_, i) => (
@@ -204,9 +222,9 @@ export function FocusPage() {
 
         {actionError && <div className="fn-error-banner">{actionError}</div>}
 
-        {countdownNotice && (
+        {completionNotice && (
           <div className={styles.noticeBanner} role="alert">
-            Resta 1 minuto de foco. Prepare-se para finalizar.
+            Sessão de foco concluída! Hora de fazer uma pausa.
           </div>
         )}
 
@@ -216,7 +234,11 @@ export function FocusPage() {
               className={styles.actionBtn}
               style={{ flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }}
               disabled={startMutation.isPending}
-              onClick={() => startMutation.mutate()}
+              onClick={() => {
+                setCompletionNotice(false);
+                primeTimerAlarm();
+                startMutation.mutate();
+              }}
             >
               {startMutation.isPending ? "Iniciando..." : "Iniciar sessão"}
             </button>
@@ -226,7 +248,10 @@ export function FocusPage() {
               className={styles.actionBtn}
               style={{ flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }}
               disabled={sessionActionPending}
-              onClick={() => resumeMutation.mutate()}
+              onClick={() => {
+                primeTimerAlarm();
+                resumeMutation.mutate();
+              }}
             >
               Retomar
             </button>
@@ -250,7 +275,10 @@ export function FocusPage() {
                   : { flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }
               }
               disabled={sessionActionPending}
-              onClick={() => finishMutation.mutate()}
+              onClick={() => {
+                autoFinishedSessionId.current = null;
+                finishMutation.mutate();
+              }}
             >
               Finalizar
             </button>

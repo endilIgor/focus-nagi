@@ -4,14 +4,16 @@ import { focusSessionsApi } from "../api/focusSessions";
 import { fetchAllContent } from "../api/pagination";
 import { projectsApi } from "../api/projects";
 import { tasksApi } from "../api/tasks";
-import { computeElapsedSeconds, useCurrentFocusSession } from "../hooks/useFocusSession";
+import { computeElapsedSeconds, CURRENT_FOCUS_SESSION_KEY, useCurrentFocusSession } from "../hooks/useFocusSession";
+import { useCountdownNotice } from "../hooks/useCountdownNotice";
 import { useClockTick } from "../hooks/useClock";
 import { useTheme } from "../theme/ThemeContext";
 import { describeApiError } from "../utils/errors";
 import { FOCUS_SESSION_STATUS_LABEL } from "../utils/labels";
+import type { FocusSessionResponse } from "../api/types";
 import styles from "./FocusPage.module.css";
 
-const PRESETS = [25, 50, 90, 15];
+const PRESETS = [25, 50, 60, 90, 15];
 const STATUS_STYLE: Record<string, [string, string]> = {
   RUNNING: ["rgba(255,255,255,.2)", "#22D3EE"],
   COMPLETED: ["rgba(255,255,255,.14)", "#C9C3DA"],
@@ -63,8 +65,11 @@ export function FocusPage() {
     queryFn: () => focusSessionsApi.list({ page: historyPage, size: 8 }),
   });
 
+  const setCurrentSession = (next: FocusSessionResponse | null) => {
+    queryClient.setQueryData(CURRENT_FOCUS_SESSION_KEY, next);
+  };
+
   const invalidateAfterAction = () => {
-    queryClient.invalidateQueries({ queryKey: ["focus-session", "current"] });
     queryClient.invalidateQueries({ queryKey: ["focus-sessions", "history"] });
     queryClient.invalidateQueries({ queryKey: ["today"] });
     queryClient.invalidateQueries({ queryKey: ["analytics"] });
@@ -78,18 +83,27 @@ export function FocusPage() {
         projectId: projectId === "" ? null : projectId,
         notes: notes.trim() ? notes.trim() : null,
       }),
-    onSuccess: () => {
+    onMutate: () => queryClient.cancelQueries({ queryKey: CURRENT_FOCUS_SESSION_KEY }),
+    onSuccess: async (data) => {
+      await queryClient.cancelQueries({ queryKey: CURRENT_FOCUS_SESSION_KEY });
       setActionError(null);
+      setCurrentSession(data);
       invalidateAfterAction();
     },
     onError: (err) => setActionError(describeApiError(err)),
   });
 
-  function useSessionAction(fn: (id: number) => Promise<unknown>) {
+  function useSessionAction(
+    fn: (id: number) => Promise<FocusSessionResponse>,
+    clearsSession = false,
+  ) {
     return useMutation({
       mutationFn: () => fn(session!.id),
-      onSuccess: () => {
+      onMutate: () => queryClient.cancelQueries({ queryKey: CURRENT_FOCUS_SESSION_KEY }),
+      onSuccess: async (data) => {
+        await queryClient.cancelQueries({ queryKey: CURRENT_FOCUS_SESSION_KEY });
         setActionError(null);
+        setCurrentSession(clearsSession ? null : data);
         invalidateAfterAction();
       },
       onError: (err: unknown) => setActionError(describeApiError(err)),
@@ -98,12 +112,18 @@ export function FocusPage() {
 
   const pauseMutation = useSessionAction(focusSessionsApi.pause);
   const resumeMutation = useSessionAction(focusSessionsApi.resume);
-  const finishMutation = useSessionAction(focusSessionsApi.finish);
-  const cancelMutation = useSessionAction(focusSessionsApi.cancel);
+  const finishMutation = useSessionAction(focusSessionsApi.finish, true);
+  const cancelMutation = useSessionAction(focusSessionsApi.cancel, true);
+  const sessionActionPending =
+    pauseMutation.isPending ||
+    resumeMutation.isPending ||
+    finishMutation.isPending ||
+    cancelMutation.isPending;
 
   const elapsedSeconds = session ? computeElapsedSeconds(session, now) : 0;
   const plannedSecondsActive = (session?.plannedFocusMinutes ?? plannedMinutes) * 60;
   const remaining = plannedSecondsActive - elapsedSeconds;
+  const countdownNotice = useCountdownNotice(session, remaining);
   const prog = Math.min(1, elapsedSeconds / Math.max(1, plannedSecondsActive));
   const overtime = remaining < 0;
   const clockText = overtime
@@ -184,6 +204,12 @@ export function FocusPage() {
 
         {actionError && <div className="fn-error-banner">{actionError}</div>}
 
+        {countdownNotice && (
+          <div className={styles.noticeBanner} role="alert">
+            Resta 1 minuto de foco. Prepare-se para finalizar.
+          </div>
+        )}
+
         <div className={styles.actions}>
           {!active && (
             <button
@@ -199,7 +225,7 @@ export function FocusPage() {
             <button
               className={styles.actionBtn}
               style={{ flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }}
-              disabled={resumeMutation.isPending}
+              disabled={sessionActionPending}
               onClick={() => resumeMutation.mutate()}
             >
               Retomar
@@ -209,7 +235,7 @@ export function FocusPage() {
             <button
               className={styles.actionBtn}
               style={{ flex: 1, background: "transparent", borderColor: "rgba(255,255,255,.16)", color: "#E4E0EF" }}
-              disabled={pauseMutation.isPending}
+              disabled={sessionActionPending}
               onClick={() => pauseMutation.mutate()}
             >
               Pausar
@@ -223,7 +249,7 @@ export function FocusPage() {
                   ? { flex: 1, background: "transparent", borderColor: "rgba(255,255,255,.16)", color: "#E4E0EF" }
                   : { flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }
               }
-              disabled={finishMutation.isPending}
+              disabled={sessionActionPending}
               onClick={() => finishMutation.mutate()}
             >
               Finalizar
@@ -233,7 +259,7 @@ export function FocusPage() {
             <button
               className={styles.actionBtn}
               style={{ flex: "0 0 auto", background: "transparent", borderColor: "rgba(244,63,94,.4)", color: "#FF8098" }}
-              disabled={cancelMutation.isPending}
+              disabled={sessionActionPending}
               onClick={() => cancelMutation.mutate()}
             >
               Cancelar

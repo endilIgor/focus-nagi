@@ -5,9 +5,9 @@ import type { FocusSessionResponse } from "../api/types";
 export const CURRENT_FOCUS_SESSION_KEY = ["focus-session", "current"] as const;
 
 export function useCurrentFocusSession() {
-  return useQuery<FocusSessionResponse | undefined>({
+  return useQuery<FocusSessionResponse | null>({
     queryKey: CURRENT_FOCUS_SESSION_KEY,
-    queryFn: () => focusSessionsApi.current(),
+    queryFn: async () => (await focusSessionsApi.current()) ?? null,
     refetchInterval: 20_000,
   });
 }

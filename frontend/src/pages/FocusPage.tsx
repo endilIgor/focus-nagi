@@ -1,15 +1,21 @@
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { focusSessionsApi } from "../api/focusSessions";
 import { fetchAllContent } from "../api/pagination";
 import { projectsApi } from "../api/projects";
 import { tasksApi } from "../api/tasks";
-import { computeElapsedSeconds, CURRENT_FOCUS_SESSION_KEY, useCurrentFocusSession } from "../hooks/useFocusSession";
+import {
+  computeElapsedSeconds,
+  CURRENT_FOCUS_SESSION_KEY,
+  FINISH_FOCUS_SESSION_MUTATION_KEY,
+  useCurrentFocusSession,
+} from "../hooks/useFocusSession";
 import { useClockTick } from "../hooks/useClock";
 import { useTheme } from "../theme/ThemeContext";
 import { describeApiError } from "../utils/errors";
 import { FOCUS_SESSION_STATUS_LABEL } from "../utils/labels";
-import { playTimerAlarm, primeTimerAlarm } from "../utils/timerAlarm";
+import { primeTimerAlarm } from "../utils/timerAlarm";
+import { requestTimerNotificationPermission } from "../utils/timerNotification";
 import type { FocusSessionResponse } from "../api/types";
 import styles from "./FocusPage.module.css";
 
@@ -34,11 +40,10 @@ export function FocusPage() {
   const [projectId, setProjectId] = useState<number | "">("");
   const [notes, setNotes] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
-  const [completionNotice, setCompletionNotice] = useState(false);
   const [historyPage, setHistoryPage] = useState(0);
-  const autoFinishedSessionId = useRef<number | null>(null);
 
   const sessionQuery = useCurrentFocusSession();
+  const globalFinishPending = useIsMutating({ mutationKey: FINISH_FOCUS_SESSION_MUTATION_KEY }) > 0;
   const session = sessionQuery.data;
   const active = session?.status === "RUNNING" || session?.status === "PAUSED";
 
@@ -98,7 +103,6 @@ export function FocusPage() {
   function useSessionAction(
     fn: (id: number) => Promise<FocusSessionResponse>,
     clearsSession = false,
-    afterSuccess?: (data: FocusSessionResponse) => void,
   ) {
     return useMutation({
       mutationFn: () => fn(session!.id),
@@ -108,7 +112,6 @@ export function FocusPage() {
         setActionError(null);
         setCurrentSession(clearsSession ? null : data);
         invalidateAfterAction();
-        afterSuccess?.(data);
       },
       onError: (err: unknown) => setActionError(describeApiError(err)),
     });
@@ -116,12 +119,7 @@ export function FocusPage() {
 
   const pauseMutation = useSessionAction(focusSessionsApi.pause);
   const resumeMutation = useSessionAction(focusSessionsApi.resume);
-  const finishMutation = useSessionAction(focusSessionsApi.finish, true, (data) => {
-    if (autoFinishedSessionId.current === data.id) {
-      setCompletionNotice(true);
-      void playTimerAlarm().catch(() => undefined);
-    }
-  });
+  const finishMutation = useSessionAction(focusSessionsApi.finish, true);
   const cancelMutation = useSessionAction(focusSessionsApi.cancel, true);
   const sessionActionPending =
     pauseMutation.isPending ||
@@ -134,19 +132,7 @@ export function FocusPage() {
   const remaining = Math.max(0, plannedSecondsActive - elapsedSeconds);
   const prog = Math.min(1, elapsedSeconds / Math.max(1, plannedSecondsActive));
   const clockText = `${pad(Math.floor(remaining / 60))}:${pad(remaining % 60)}`;
-  const finishSession = finishMutation.mutate;
-
-  useEffect(() => {
-    if (
-      session?.status === "RUNNING" &&
-      remaining === 0 &&
-      autoFinishedSessionId.current !== session.id &&
-      !finishMutation.isPending
-    ) {
-      autoFinishedSessionId.current = session.id;
-      finishSession();
-    }
-  }, [session?.id, session?.status, remaining, finishMutation.isPending, finishSession]);
+  const timerCompletionPending = session?.status === "RUNNING" && remaining === 0 && globalFinishPending;
 
   const statusLabel = session?.status === "RUNNING" ? "EM EXECUÇÃO" : session?.status === "PAUSED" ? "PAUSADA" : "PRONTA";
   const circumference = 2 * Math.PI * 150;
@@ -222,12 +208,6 @@ export function FocusPage() {
 
         {actionError && <div className="fn-error-banner">{actionError}</div>}
 
-        {completionNotice && (
-          <div className={styles.noticeBanner} role="alert">
-            Sessão de foco concluída! Hora de fazer uma pausa.
-          </div>
-        )}
-
         <div className={styles.actions}>
           {!active && (
             <button
@@ -235,8 +215,8 @@ export function FocusPage() {
               style={{ flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }}
               disabled={startMutation.isPending}
               onClick={() => {
-                setCompletionNotice(false);
                 primeTimerAlarm();
+                void requestTimerNotificationPermission();
                 startMutation.mutate();
               }}
             >
@@ -247,9 +227,10 @@ export function FocusPage() {
             <button
               className={styles.actionBtn}
               style={{ flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }}
-              disabled={sessionActionPending}
+              disabled={sessionActionPending || timerCompletionPending}
               onClick={() => {
                 primeTimerAlarm();
+                void requestTimerNotificationPermission();
                 resumeMutation.mutate();
               }}
             >
@@ -260,7 +241,7 @@ export function FocusPage() {
             <button
               className={styles.actionBtn}
               style={{ flex: 1, background: "transparent", borderColor: "rgba(255,255,255,.16)", color: "#E4E0EF" }}
-              disabled={sessionActionPending}
+              disabled={sessionActionPending || timerCompletionPending}
               onClick={() => pauseMutation.mutate()}
             >
               Pausar
@@ -274,11 +255,8 @@ export function FocusPage() {
                   ? { flex: 1, background: "transparent", borderColor: "rgba(255,255,255,.16)", color: "#E4E0EF" }
                   : { flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }
               }
-              disabled={sessionActionPending}
-              onClick={() => {
-                autoFinishedSessionId.current = null;
-                finishMutation.mutate();
-              }}
+              disabled={sessionActionPending || timerCompletionPending}
+              onClick={() => finishMutation.mutate()}
             >
               Finalizar
             </button>
@@ -287,7 +265,7 @@ export function FocusPage() {
             <button
               className={styles.actionBtn}
               style={{ flex: "0 0 auto", background: "transparent", borderColor: "rgba(244,63,94,.4)", color: "#FF8098" }}
-              disabled={sessionActionPending}
+              disabled={sessionActionPending || timerCompletionPending}
               onClick={() => cancelMutation.mutate()}
             >
               Cancelar

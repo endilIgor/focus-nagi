@@ -3,6 +3,7 @@ import { focusSessionsApi } from "../api/focusSessions";
 import type { FocusSessionResponse } from "../api/types";
 
 export const CURRENT_FOCUS_SESSION_KEY = ["focus-session", "current"] as const;
+export const FINISH_FOCUS_SESSION_MUTATION_KEY = ["focus-session", "finish"] as const;
 
 export function useCurrentFocusSession() {
   return useQuery<FocusSessionResponse | null>({

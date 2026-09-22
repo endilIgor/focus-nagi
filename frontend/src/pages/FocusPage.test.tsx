@@ -166,6 +166,10 @@ describe("FocusPage session actions", () => {
   });
 
   it("start with the 60 MIN preset starts a 60-minute session and shows controls immediately, without refetching", async () => {
+    const requestPermission = vi.fn().mockResolvedValue("granted");
+    const browserNotification = vi.fn();
+    Object.assign(browserNotification, { permission: "default", requestPermission });
+    vi.stubGlobal("Notification", browserNotification);
     mockedApi.current.mockResolvedValue(undefined);
     mockedApi.start.mockResolvedValue(session({ id: 7, plannedFocusMinutes: 60 }));
 
@@ -179,6 +183,7 @@ describe("FocusPage session actions", () => {
     expect(mockedApi.start).toHaveBeenCalledWith(
       expect.objectContaining({ plannedFocusMinutes: 60 }),
     );
+    expect(requestPermission).toHaveBeenCalledTimes(1);
     expect(mockedApi.current).toHaveBeenCalledTimes(1);
   });
 
@@ -256,7 +261,7 @@ describe("FocusPage current-session polling race", () => {
   });
 });
 
-describe("FocusPage timer completion", () => {
+describe("FocusPage timer display", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.unstubAllGlobals();
@@ -264,93 +269,14 @@ describe("FocusPage timer completion", () => {
     mockedApi.list.mockResolvedValue(EMPTY_PAGE);
   });
 
-  it("automatically finishes the session at zero without showing overtime", async () => {
+  it("stops at zero without showing overtime while global completion runs", async () => {
     const startedAt = "2026-09-21T12:00:00Z";
-    mockNow = Date.parse(startedAt) + (25 * 60 - 1) * 1000;
+    mockNow = Date.parse(startedAt) + 25 * 60 * 1000;
     mockedApi.current.mockResolvedValue(session({ startedAt, plannedFocusMinutes: 25 }));
-    mockedApi.finish.mockImplementation(() => new Promise<FocusSessionResponse>(() => undefined));
-
-    const { rerenderPage } = renderPage();
-    await screen.findByRole("button", { name: "Finalizar" });
-
-    act(() => {
-      mockNow += 1000;
-      rerenderPage();
-    });
-    await waitFor(() => expect(mockedApi.finish).toHaveBeenCalledWith(1));
-    for (let i = 0; i < 3; i++) {
-      act(() => {
-        mockNow += 1000;
-        rerenderPage();
-      });
-    }
-    expect(mockedApi.finish).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("00:00")).toBeInTheDocument();
-    expect(screen.queryByText("TEMPO EXTRA")).not.toBeInTheDocument();
-  });
-
-  it("shows a completion notification and sounds the alarm after an automatic finish", async () => {
-    const oscillatorStart = vi.fn();
-    class FakeAudioContext {
-      currentTime = 0;
-      destination = {};
-      state = "running";
-      resume = vi.fn().mockResolvedValue(undefined);
-      createGain = () => ({
-        gain: {
-          setValueAtTime: vi.fn(),
-          exponentialRampToValueAtTime: vi.fn(),
-        },
-        connect: vi.fn(),
-      });
-      createOscillator = () => ({
-        type: "sine",
-        frequency: { setValueAtTime: vi.fn() },
-        connect: vi.fn(),
-        start: oscillatorStart,
-        stop: vi.fn(),
-      });
-    }
-    vi.stubGlobal("AudioContext", FakeAudioContext);
-    mockedApi.current.mockResolvedValue(undefined);
-    mockedApi.start.mockResolvedValue(session({ plannedFocusMinutes: 50 }));
-    mockedApi.finish.mockResolvedValue(
-      session({ status: "COMPLETED", endedAt: "2026-09-21T12:50:00Z", actualFocusSeconds: 3000 }),
-    );
-
-    const { rerenderPage } = renderPage();
-    await userEvent.click(await screen.findByRole("button", { name: "Iniciar sessão" }));
-    await screen.findByRole("button", { name: "Finalizar" });
-
-    act(() => {
-      mockNow += 50 * 60 * 1000;
-      rerenderPage();
-    });
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(/sessão de foco concluída/i);
-    expect(oscillatorStart).toHaveBeenCalled();
-  });
-
-  it("keeps a manual retry silent after automatic finish fails", async () => {
-    const audioContext = vi.fn();
-    vi.stubGlobal("AudioContext", audioContext);
-    mockedApi.current.mockResolvedValue(session());
-    mockedApi.finish
-      .mockRejectedValueOnce(new Error("offline"))
-      .mockResolvedValueOnce(
-        session({ status: "COMPLETED", endedAt: "2026-09-21T12:25:00Z", actualFocusSeconds: 1500 }),
-      );
-    mockNow += 25 * 60 * 1000;
 
     renderPage();
-    await waitFor(() => expect(mockedApi.finish).toHaveBeenCalledTimes(1));
-    await screen.findByText(/offline/i);
-
-    await userEvent.click(screen.getByRole("button", { name: "Finalizar" }));
-
-    await waitFor(() => expect(screen.getByRole("button", { name: "Iniciar sessão" })).toBeInTheDocument());
-    expect(mockedApi.finish).toHaveBeenCalledTimes(2);
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(audioContext).not.toHaveBeenCalled();
+    await screen.findByRole("button", { name: "Finalizar" });
+    expect(screen.getByText("00:00")).toBeInTheDocument();
+    expect(screen.queryByText("TEMPO EXTRA")).not.toBeInTheDocument();
   });
 });

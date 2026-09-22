@@ -101,6 +101,36 @@ describe("AppShell global focus timer completion", () => {
     );
   });
 
+  it("keeps the FN logo blue when there is no focus session", () => {
+    mockSession.current = null;
+
+    renderShell();
+
+    expect(screen.getByText("FN")).toHaveAttribute("data-focus-state", "idle");
+    expect(mockedFinish).not.toHaveBeenCalled();
+  });
+
+  it("turns the FN logo purple while a focus session is active", () => {
+    mockNow.current = Date.parse("2026-09-22T12:01:00Z");
+
+    renderShell();
+
+    expect(screen.getByText("FN")).toHaveAttribute("data-focus-state", "focusing");
+    expect(mockedFinish).not.toHaveBeenCalled();
+  });
+
+  it("keeps the FN logo purple while a focus session is paused", () => {
+    mockSession.current = session({
+      status: "PAUSED",
+      lastPausedAt: "2026-09-22T12:10:00Z",
+    });
+
+    renderShell();
+
+    expect(screen.getByText("FN")).toHaveAttribute("data-focus-state", "focusing");
+    expect(mockedFinish).not.toHaveBeenCalled();
+  });
+
   it("finishes and sends a browser notification while another app page is open", async () => {
     const browserNotification = vi.fn();
     Object.assign(browserNotification, {
@@ -119,6 +149,7 @@ describe("AppShell global focus timer completion", () => {
     );
     expect(mockedPlayAlarm).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("alert")).toHaveTextContent(/sessão de foco concluída/i);
+    expect(screen.getByText("FN")).toHaveAttribute("data-focus-state", "completed");
   });
 
   it("surfaces an automatic-finish failure instead of silently leaving the timer stuck", async () => {

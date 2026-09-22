@@ -33,6 +33,15 @@
   color: #07070c;
   box-shadow: 0 0 20px var(--glow);
   clip-path: polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.logo[data-focus-state="focusing"] {
+  background: #a855f7;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.42);
+}
+.logo[data-focus-state="completed"] {
+  background: #d8d4e6;
+  box-shadow: 0 0 18px rgba(216, 212, 230, 0.3);
 }
 .brandTitle {
   font: 700 16px "Chakra Petch", sans-serif;

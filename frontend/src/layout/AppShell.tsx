@@ -56,6 +56,7 @@ export function AppShell() {
   const running = session?.status === "RUNNING";
   const paused = session?.status === "PAUSED";
   const liveLabel = running ? "EM FOCO" : paused ? "PAUSADA" : "OCIOSO";
+  const logoFocusState = completionNotice ? "completed" : session ? "focusing" : "idle";
   const elapsedSeconds = session ? computeElapsedSeconds(session, now) : 0;
   const remainingSeconds = session
     ? Math.max(0, session.plannedFocusMinutes * 60 - elapsedSeconds)
@@ -145,7 +146,9 @@ export function AppShell() {
         <header className={styles.header}>
           <div className={styles.headerInner}>
             <div className={styles.brand}>
-              <div className={styles.logo}>FN</div>
+              <div className={styles.logo} data-focus-state={logoFocusState}>
+                FN
+              </div>
               <div className={styles.brandTitle}>
                 FOCUS<span>//</span>NAGI
               </div>

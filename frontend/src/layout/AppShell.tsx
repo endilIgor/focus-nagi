@@ -14,6 +14,7 @@ import {
 import { useTheme } from "../theme/ThemeContext";
 import { addDaysIso, todayIso } from "../utils/date";
 import { describeApiError } from "../utils/errors";
+import { setFocusFaviconState } from "../utils/focusFavicon";
 import { playTimerAlarm } from "../utils/timerAlarm";
 import { showTimerCompletionNotification } from "../utils/timerNotification";
 import styles from "./AppShell.module.css";
@@ -84,6 +85,17 @@ export function AppShell() {
     onError: (error) => setAutoFinishError(describeApiError(error)),
   });
   const finishSession = finishMutation.mutate;
+
+  useEffect(() => {
+    setFocusFaviconState(logoFocusState);
+  }, [logoFocusState]);
+
+  useEffect(
+    () => () => {
+      setFocusFaviconState("idle");
+    },
+    [],
+  );
 
   useEffect(() => {
     if (

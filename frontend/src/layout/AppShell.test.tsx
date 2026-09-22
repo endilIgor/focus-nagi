@@ -54,6 +54,10 @@ import { playTimerAlarm } from "../utils/timerAlarm";
 const mockedFinish = vi.mocked(focusSessionsApi.finish);
 const mockedPlayAlarm = vi.mocked(playTimerAlarm);
 
+function favicon(): HTMLLinkElement | null {
+  return document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+}
+
 function session(overrides: Partial<FocusSessionResponse> = {}): FocusSessionResponse {
   return {
     id: 41,
@@ -94,6 +98,7 @@ describe("AppShell global focus timer completion", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllGlobals();
+    document.head.querySelectorAll('link[rel="icon"]').forEach((link) => link.remove());
     mockNow.current = Date.parse("2026-09-22T12:25:00Z");
     mockSession.current = session();
     mockedFinish.mockResolvedValue(
@@ -107,6 +112,7 @@ describe("AppShell global focus timer completion", () => {
     renderShell();
 
     expect(screen.getByText("FN")).toHaveAttribute("data-focus-state", "idle");
+    expect(favicon()).toHaveAttribute("data-focus-state", "idle");
     expect(mockedFinish).not.toHaveBeenCalled();
   });
 
@@ -116,6 +122,8 @@ describe("AppShell global focus timer completion", () => {
     renderShell();
 
     expect(screen.getByText("FN")).toHaveAttribute("data-focus-state", "focusing");
+    expect(favicon()).toHaveAttribute("data-focus-state", "focusing");
+    expect(favicon()?.href).toContain("%23A855F7");
     expect(mockedFinish).not.toHaveBeenCalled();
   });
 
@@ -128,6 +136,8 @@ describe("AppShell global focus timer completion", () => {
     renderShell();
 
     expect(screen.getByText("FN")).toHaveAttribute("data-focus-state", "focusing");
+    expect(favicon()).toHaveAttribute("data-focus-state", "focusing");
+    expect(favicon()?.href).toContain("%23A855F7");
     expect(mockedFinish).not.toHaveBeenCalled();
   });
 
@@ -150,6 +160,8 @@ describe("AppShell global focus timer completion", () => {
     expect(mockedPlayAlarm).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("alert")).toHaveTextContent(/sessão de foco concluída/i);
     expect(screen.getByText("FN")).toHaveAttribute("data-focus-state", "completed");
+    expect(favicon()).toHaveAttribute("data-focus-state", "completed");
+    expect(favicon()?.href).toContain("%23D8D4E6");
   });
 
   it("surfaces an automatic-finish failure instead of silently leaving the timer stuck", async () => {

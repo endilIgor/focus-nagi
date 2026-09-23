@@ -11,6 +11,8 @@ export function JournalPage() {
   const queryClient = useQueryClient();
   const today = todayIso();
   const [draft, setDraft] = useState("");
+  const [draftEdited, setDraftEdited] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
@@ -21,7 +23,7 @@ export function JournalPage() {
   const todayEntry = todayEntries.at(-1) ?? null;
 
   useEffect(() => {
-    if (todayEntry) setDraft(todayEntry.content);
+    if (todayEntry && !draftEdited) setDraft(todayEntry.content);
   }, [todayEntry?.id]);
 
   const saveMutation = useMutation({
@@ -29,6 +31,7 @@ export function JournalPage() {
       todayEntry ? journalApi.update(todayEntry.id, { content: draft }) : journalApi.create({ entryDate: today, content: draft }),
     onSuccess: () => {
       setError(null);
+      setSaved(true);
       queryClient.invalidateQueries({ queryKey: ["journal"] });
     },
     onError: (err) => setError(describeApiError(err)),
@@ -55,17 +58,24 @@ export function JournalPage() {
             <span className="fn-mono-label">{today}</span>
           </div>
           {error && <div className="fn-error-banner">{error}</div>}
+          {todayEntryQuery.isError && <div className="fn-error-banner">Não foi possível carregar a entrada de hoje. Recarregue a página e tente novamente.</div>}
+          {saved && !error && <div role="status">Entrada salva.</div>}
           <textarea
             className="fn-textarea"
             rows={13}
             style={{ width: "100%" }}
             placeholder="O que travou, o que fluiu, o que amanhã herda..."
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            disabled={saveMutation.isPending}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setDraftEdited(true);
+              setSaved(false);
+            }}
           />
           <div className={styles.editorFooter}>
             <span className="fn-mono-label">{draft.length} CARACTERES</span>
-            <button className="fn-btn-primary" disabled={saveMutation.isPending || !draft.trim()} onClick={() => saveMutation.mutate()}>
+            <button className="fn-btn-primary" disabled={!todayEntryQuery.isSuccess || saveMutation.isPending || !draft.trim()} onClick={() => saveMutation.mutate()}>
               {saveMutation.isPending ? "Salvando..." : "Salvar entrada"}
             </button>
           </div>

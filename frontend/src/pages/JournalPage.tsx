@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { journalApi } from "../api/journal";
+import type { JournalEntryResponse, Page } from "../api/types";
 import { useTheme } from "../theme/ThemeContext";
 import { todayIso, weekdayLabel } from "../utils/date";
 import { describeApiError } from "../utils/errors";
@@ -11,34 +12,45 @@ export function JournalPage() {
   const queryClient = useQueryClient();
   const today = todayIso();
   const [draft, setDraft] = useState("");
-  const [draftEdited, setDraftEdited] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
-  const todayEntryQuery = useQuery({ queryKey: ["journal", "by-date", today], queryFn: () => journalApi.byDate(today) });
   const recentQuery = useQuery({ queryKey: ["journal", "recent", page], queryFn: () => journalApi.recent(page, 10) });
 
-  const todayEntries = todayEntryQuery.data ?? [];
-  const todayEntry = todayEntries.at(-1) ?? null;
-
-  useEffect(() => {
-    if (todayEntry && !draftEdited) setDraft(todayEntry.content);
-  }, [todayEntry?.id]);
-
   const saveMutation = useMutation({
-    mutationFn: () =>
-      todayEntry ? journalApi.update(todayEntry.id, { content: draft }) : journalApi.create({ entryDate: today, content: draft }),
-    onSuccess: () => {
+    mutationFn: () => journalApi.create({ entryDate: today, content: draft }),
+    onMutate: () => queryClient.cancelQueries({ queryKey: ["journal", "recent"] }),
+    onSuccess: async (entry) => {
+      await queryClient.cancelQueries({ queryKey: ["journal", "recent"] });
+      queryClient.setQueryData<Page<JournalEntryResponse>>(["journal", "recent", 0], (old) => {
+        const current = old ?? {
+          content: [], totalElements: 0, totalPages: 1, size: 10, number: 0,
+          numberOfElements: 0, first: true, last: true, empty: true,
+        };
+        const content = [entry, ...current.content.filter((item) => item.id !== entry.id)].slice(0, current.size);
+        const totalElements = current.totalElements + 1;
+        return {
+          ...current, content, totalElements, totalPages: Math.ceil(totalElements / current.size),
+          numberOfElements: content.length, empty: false, last: totalElements <= current.size,
+        };
+      });
+      setPage(0);
+      setDraft("");
       setError(null);
       setSaved(true);
-      queryClient.invalidateQueries({ queryKey: ["journal"] });
+      queryClient.invalidateQueries({ queryKey: ["journal", "recent"], predicate: (query) => query.queryKey[2] !== 0 });
     },
     onError: (err) => setError(describeApiError(err)),
   });
 
   const entries = recentQuery.data?.content ?? [];
-  const previousEntries = entries.filter((entry) => entry.id !== todayEntry?.id);
+  const days = entries.reduce<{ date: string; entries: JournalEntryResponse[] }[]>((groups, entry) => {
+    const last = groups.at(-1);
+    if (last?.date === entry.entryDate) last.entries.push(entry);
+    else groups.push({ date: entry.entryDate, entries: [entry] });
+    return groups;
+  }, []);
 
   return (
     <div>
@@ -58,7 +70,7 @@ export function JournalPage() {
             <span className="fn-mono-label">{today}</span>
           </div>
           {error && <div className="fn-error-banner">{error}</div>}
-          {todayEntryQuery.isError && <div className="fn-error-banner">Não foi possível carregar a entrada de hoje. Recarregue a página e tente novamente.</div>}
+          {recentQuery.isError && <div className="fn-error-banner">Não foi possível carregar os registros. Recarregue a página e tente novamente.</div>}
           {saved && !error && <div role="status">Entrada salva.</div>}
           <textarea
             className="fn-textarea"
@@ -69,32 +81,31 @@ export function JournalPage() {
             disabled={saveMutation.isPending}
             onChange={(e) => {
               setDraft(e.target.value);
-              setDraftEdited(true);
               setSaved(false);
             }}
           />
           <div className={styles.editorFooter}>
             <span className="fn-mono-label">{draft.length} CARACTERES</span>
-            <button className="fn-btn-primary" disabled={!todayEntryQuery.isSuccess || saveMutation.isPending || !draft.trim()} onClick={() => saveMutation.mutate()}>
+            <button className="fn-btn-primary" disabled={!recentQuery.isSuccess || saveMutation.isPending || !draft.trim()} onClick={() => saveMutation.mutate()}>
               {saveMutation.isPending ? "Salvando..." : "Salvar entrada"}
             </button>
           </div>
         </div>
 
         <div className={styles.list}>
-          <div className={styles.listHead}>Entradas anteriores</div>
-          {previousEntries.map((e) => (
-              <div key={e.id} className={styles.entry}>
-                <div className={styles.entryHead}>
-                  <span className={styles.entryDate} style={{ color: theme.acc2 }}>
-                    {e.entryDate}
-                  </span>
-                  <span className={styles.entryWeekday}>{weekdayLabel(e.entryDate)}</span>
-                </div>
-                <div className={styles.entryExcerpt}>{e.content.length > 220 ? `${e.content.slice(0, 220)}…` : e.content}</div>
+          <div className={styles.listHead}>Registros por dia</div>
+          {days.map((day) => (
+            <section key={day.date} className={styles.day}>
+              <div className={styles.entryHead}>
+                <span className={styles.entryDate} style={{ color: theme.acc2 }}>{day.date}</span>
+                <span className={styles.entryWeekday}>{weekdayLabel(day.date)}</span>
               </div>
-            ))}
-          {previousEntries.length === 0 && <div className="fn-empty">NENHUMA ENTRADA ANTERIOR</div>}
+              {day.entries.map((entry) => (
+                <div key={entry.id} className={styles.entryExcerpt}>{entry.content}</div>
+              ))}
+            </section>
+          ))}
+          {recentQuery.isSuccess && days.length === 0 && <div className="fn-empty">NENHUM REGISTRO AINDA</div>}
           {recentQuery.data && recentQuery.data.totalPages > 1 && (
             <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 20px" }}>
               <button className="fn-btn-ghost" style={{ padding: "6px 12px", fontSize: 10 }} disabled={recentQuery.data.first} onClick={() => setPage((p) => p - 1)}>

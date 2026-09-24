@@ -40,3 +40,21 @@ export function weekdayLabel(iso: string, locale = "pt-BR"): string {
   const date = new Date(y, m - 1, d);
   return date.toLocaleDateString(locale, { weekday: "long" }).toUpperCase();
 }
+
+function monthShort(iso: string, locale = "pt-BR"): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString(locale, { month: "short" }).replace(/\./g, "");
+}
+
+/** Human-readable "de X a Y" range for a week, in Portuguese, without exposing the ISO week code. */
+export function formatWeekRangePt(startIso: string, endIso: string): string {
+  const [ys, , ds] = startIso.split("-");
+  const [ye, , de] = endIso.split("-");
+  const sameYear = ys === ye;
+  const sameMonth = sameYear && startIso.slice(0, 7) === endIso.slice(0, 7);
+
+  if (sameMonth) return `${ds} a ${de} de ${monthShort(endIso)} de ${ye}`;
+  const startLabel = `${ds} de ${monthShort(startIso)}${sameYear ? "" : ` de ${ys}`}`;
+  return `${startLabel} a ${de} de ${monthShort(endIso)} de ${ye}`;
+}

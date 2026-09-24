@@ -5,7 +5,7 @@ import type { AnalyticsPeriod } from "../api/types";
 import { formatMinutesAsHm } from "../hooks/useClock";
 import { useTheme } from "../theme/ThemeContext";
 import { evaluateWeek, fillHourlyFocus, periodRange, weekInputFromDate, weekStartFromInput } from "../utils/analytics";
-import { addDaysIso, todayIso, weekdayLabel } from "../utils/date";
+import { addDaysIso, formatWeekRangePt, todayIso, weekdayLabel } from "../utils/date";
 import { describeApiError } from "../utils/errors";
 import { ANALYTICS_PERIOD_LABEL } from "../utils/labels";
 import styles from "./AnalyticsPage.module.css";
@@ -20,6 +20,12 @@ export function AnalyticsPage() {
   const [month, setMonth] = useState(() => today.slice(0, 7));
   const { from, to } = periodRange(period, today, week, month);
   const currentWeek = weekInputFromDate(today);
+  const weekStart = weekStartFromInput(week);
+  const weekEnd = addDaysIso(weekStart, 6);
+  const isCurrentWeek = week === currentWeek;
+  const goToPreviousWeek = () => setWeek(weekInputFromDate(addDaysIso(weekStart, -7)));
+  const goToNextWeek = () => { if (!isCurrentWeek) setWeek(weekInputFromDate(addDaysIso(weekStart, 7))); };
+  const jumpToWeekContaining = (dateIso: string) => { if (dateIso) setWeek(weekInputFromDate(dateIso > today ? today : dateIso)); };
   const weekend = [0, 6].includes(new Date(`${today}T12:00:00Z`).getUTCDay());
   const provisional = period === "WEEK" && week === currentWeek && weekend;
   const ratingStart = period === "WEEK" ? (week === currentWeek && !weekend ? addDaysIso(weekStartFromInput(week), -7) : from) : null;
@@ -65,9 +71,14 @@ export function AnalyticsPage() {
         </div>
       </div>
       <div className={styles.rangeRow}>
-        {period === "WEEK" && <label>Selecionar semana <input aria-label="Selecionar semana" type="week" value={week} max={currentWeek} onChange={(event) => setWeek(event.target.value)} /></label>}
+        {period === "WEEK" && <div className={styles.weekPicker}>
+          <button type="button" className="fn-chip" onClick={goToPreviousWeek}>← Semana anterior</button>
+          <span className={styles.weekRangeLabel}>{formatWeekRangePt(weekStart, weekEnd)}</span>
+          <button type="button" className="fn-chip" onClick={goToNextWeek} disabled={isCurrentWeek}>Próxima semana →</button>
+          <label className={styles.weekJump}>Pular para <input aria-label="Pular para uma data" type="date" value={weekStart} max={today} onChange={(event) => jumpToWeekContaining(event.target.value)} /></label>
+        </div>}
         {period === "MONTH" && <label>Selecionar mês <input aria-label="Selecionar mês" type="month" value={month} max={today.slice(0, 7)} onChange={(event) => setMonth(event.target.value)} /></label>}
-        <span className="fn-mono-label">{from} — {to}</span>
+        {period !== "WEEK" && <span className="fn-mono-label">{from} — {to}</span>}
       </div>
       {error && <div className="fn-error-banner" role="alert">{describeApiError(error.error)}</div>}
       <div className={styles.summary}>
@@ -79,7 +90,6 @@ export function AnalyticsPage() {
       {period === "WEEK" && <div className={styles.panel} aria-live="polite">
         <div className={styles.panelTitle}>{provisional ? "Avaliação parcial da semana" : "Avaliação semanal"} · {ratingStart} a {ratingEnd}</div>
         {rating ? <><strong className={styles.rating}>{rating.rating.toUpperCase()}</strong><p>{formatMinutesAsHm(ratingDays!.reduce((sum, day) => sum + day.focusedMinutes, 0))} de foco · checklist {rating.completionRate === null ? "sem itens" : `${Math.round(rating.completionRate * 100)}% concluído`}</p></> : <p>{ratingStart && ratingEnd && ratingEnd >= today ? "Avaliação parcial disponível no fim de semana; resultado final após domingo." : "Carregando avaliação…"}</p>}
-        <small>Critério: foco &lt;4h / 4–7h / 7–10h / ≥10h; checklist &lt;25% / 25–50% / 50–75% / ≥75%. Média dos níveis (arredondada para baixo); sem itens, vale apenas o foco.</small>
       </div>}
       <div className={styles.panel}>
         <div className={styles.panelHead}><div className={styles.panelTitle}>Mapa de foco · período selecionado</div><span className="fn-mono-label">MENOS ▪ MAIS</span></div>

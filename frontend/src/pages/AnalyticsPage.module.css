@@ -21,6 +21,10 @@
 }
 .rangeRow label { display: flex; align-items: center; gap: 10px; }
 .rangeRow input { color: var(--text-primary); color-scheme: dark; background: transparent; border: 1px solid var(--hairline); padding: 7px; font: inherit; }
+.weekPicker { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.weekPicker button:disabled { opacity: 0.35; cursor: not-allowed; }
+.weekRangeLabel { color: var(--text-primary); font: 600 12px "Chakra Petch", sans-serif; letter-spacing: 0.04em; }
+.weekJump { display: flex; align-items: center; gap: 10px; }
 .rating { display: block; margin-top: 12px; color: var(--acc); font: 700 24px "Chakra Petch", sans-serif; }
 .panel p, .panel small { color: var(--text-mute); }
 

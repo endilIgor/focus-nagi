@@ -15,14 +15,87 @@ vi.mock("../api/analytics", () => ({ analyticsApi: {
 
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 
-it("queries the chosen historical ISO week and shows its completed weekly rating", async () => {
+it("navigates to the previous week via an accessible button, without exposing the ISO week code, and shows its completed weekly rating", async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-09-29T12:00:00"));
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
-  fireEvent.change(screen.getByLabelText("Selecionar semana"), { target: { value: "2026-W39" } });
+  fireEvent.click(screen.getByRole("button", { name: /semana anterior/i }));
   await waitFor(() => expect(analyticsApi.byDay).toHaveBeenCalledWith("2026-09-21", "2026-09-27"));
+  expect(screen.getByText(/21 a 27 de set de 2026/i)).toBeInTheDocument();
+  expect(screen.queryByText(/2026-w/i)).toBeNull();
   await waitFor(() => expect(screen.getByText(/excelente/i)).toBeTruthy());
   expect(screen.queryByText(/Foco por projeto/i)).toBeNull();
+});
+
+it("jumps straight to an old week via the optional date field, skipping intermediate weeks", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-29T12:00:00"));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
+  fireEvent.change(screen.getByLabelText(/pular para/i), { target: { value: "2026-08-05" } });
+  await waitFor(() => expect(analyticsApi.byDay).toHaveBeenCalledWith("2026-08-03", "2026-08-09"));
+  expect(screen.getByText(/03 a 09 de ago de 2026/i)).toBeInTheDocument();
+});
+
+it("disables moving to a future week once the current week is reached", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-29T12:00:00"));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
+  expect(screen.getByRole("button", { name: /próxima semana/i })).toBeDisabled();
+});
+
+it("no longer shows the internal scoring thresholds text", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-26T12:00:00"));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
+  await screen.findByText(/avaliação parcial/i);
+  expect(screen.queryByText(/Critério: foco/i)).toBeNull();
+});
+
+it("clearing the jump-to-date field does not trigger invalid queries nor change the selected week", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-29T12:00:00"));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
+  await waitFor(() => expect(analyticsApi.byDay).toHaveBeenCalledWith("2026-09-28", "2026-09-29"));
+  const callsBefore = vi.mocked(analyticsApi.byDay).mock.calls.length;
+
+  fireEvent.change(screen.getByLabelText(/pular para/i), { target: { value: "" } });
+
+  expect(screen.getByText(/28 de set a 04 de out de 2026/i)).toBeInTheDocument();
+  expect(vi.mocked(analyticsApi.byDay).mock.calls.length).toBe(callsBefore);
+  expect(vi.mocked(analyticsApi.byDay).mock.calls.some(([from, to]) => from?.includes("NaN") || to?.includes("NaN"))).toBe(false);
+});
+
+it("shows only the human-readable week range, not a raw ISO date span, for the week period", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-29T12:00:00"));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
+  await waitFor(() => expect(analyticsApi.byDay).toHaveBeenCalledWith("2026-09-28", "2026-09-29"));
+  expect(screen.getByText(/28 de set a 04 de out de 2026/i)).toBeInTheDocument();
+  expect(screen.queryByText("2026-09-28 — 2026-09-29")).toBeNull();
+});
+
+it("still shows the raw ISO date range for month and today periods", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-29T12:00:00"));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
+
+  fireEvent.click(screen.getByRole("button", { name: /^mês$/i }));
+  await waitFor(() => expect(screen.getByText("2026-09-01 — 2026-09-29")).toBeInTheDocument());
+
+  fireEvent.click(screen.getByRole("button", { name: /^hoje$/i }));
+  await waitFor(() => expect(screen.getByText("2026-09-29 — 2026-09-29")).toBeInTheDocument());
+});
+
+it("navigates across an ISO year boundary via the previous-week button with correct queries and label", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2021-01-04T12:00:00"));
+  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
+  await waitFor(() => expect(analyticsApi.byDay).toHaveBeenCalledWith("2021-01-04", "2021-01-04"));
+
+  fireEvent.click(screen.getByRole("button", { name: /semana anterior/i }));
+
+  await waitFor(() => expect(analyticsApi.byDay).toHaveBeenCalledWith("2020-12-28", "2021-01-03"));
+  expect(screen.getByText(/28 de dez de 2020 a 03 de jan de 2021/i)).toBeInTheDocument();
 });
 
 it("queries the chosen month for all focus charts", async () => {

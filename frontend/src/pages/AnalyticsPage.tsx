@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { analyticsApi } from "../api/analytics";
 import type { AnalyticsPeriod } from "../api/types";
@@ -18,6 +18,14 @@ export function AnalyticsPage() {
   const today = todayIso();
   const [week, setWeek] = useState(() => weekInputFromDate(today));
   const [month, setMonth] = useState(() => today.slice(0, 7));
+  const monthPickerRef = useRef<HTMLInputElement>(null);
+  const currentMonth = today.slice(0, 7);
+  const shiftMonth = (offset: number) => {
+    const [year, number] = month.split("-").map(Number);
+    const date = new Date(Date.UTC(year, number - 1 + offset, 1));
+    setMonth(`${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`);
+  };
+  const monthLabel = new Date(`${month}-01T12:00:00Z`).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
   const { from, to } = periodRange(period, today, week, month);
   const currentWeek = weekInputFromDate(today);
   const weekStart = weekStartFromInput(week);
@@ -77,8 +85,16 @@ export function AnalyticsPage() {
           <button type="button" className="fn-chip" onClick={goToNextWeek} disabled={isCurrentWeek}>Próxima semana →</button>
           <label className={styles.weekJump}>Pular para <input aria-label="Pular para uma data" type="date" value={weekStart} max={today} onChange={(event) => jumpToWeekContaining(event.target.value)} /></label>
         </div>}
-        {period === "MONTH" && <label>Selecionar mês <input aria-label="Selecionar mês" type="month" value={month} max={today.slice(0, 7)} onChange={(event) => setMonth(event.target.value)} /></label>}
-        {period !== "WEEK" && <span className="fn-mono-label">{from} — {to}</span>}
+        {period === "MONTH" && <div className={styles.weekPicker}>
+          <button type="button" className="fn-chip" onClick={() => shiftMonth(-1)}>← Mês anterior</button>
+          <span className={styles.weekRangeLabel}>{monthLabel}</span>
+          <button type="button" className="fn-chip" onClick={() => shiftMonth(1)} disabled={month >= currentMonth}>Próximo mês →</button>
+          <span className={styles.calendarControl}>
+            <button type="button" className="fn-chip" aria-label="Abrir calendário de meses" onClick={() => monthPickerRef.current?.showPicker?.()}>▦ Calendário</button>
+            <input ref={monthPickerRef} className={styles.calendarInput} aria-label="Data para selecionar mês" type="date" value={`${month}-01`} max={today} onChange={(event) => { if (event.target.value && event.target.value <= today) setMonth(event.target.value.slice(0, 7)); }} />
+          </span>
+        </div>}
+        {period === "TODAY" && <span className="fn-mono-label">{from} — {to}</span>}
       </div>
       {error && <div className="fn-error-banner" role="alert">{describeApiError(error.error)}</div>}
       <div className={styles.summary}>

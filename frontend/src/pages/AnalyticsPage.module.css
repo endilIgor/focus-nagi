@@ -25,6 +25,8 @@
 .weekPicker button:disabled { opacity: 0.35; cursor: not-allowed; }
 .weekRangeLabel { color: var(--text-primary); font: 600 12px "Chakra Petch", sans-serif; letter-spacing: 0.04em; }
 .weekJump { display: flex; align-items: center; gap: 10px; }
+.calendarControl { position: relative; display: inline-flex; align-items: center; }
+.calendarInput { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; clip-path: inset(50%); pointer-events: none; }
 .rating { display: block; margin-top: 12px; color: var(--acc); font: 700 24px "Chakra Petch", sans-serif; }
 .panel p, .panel small { color: var(--text-mute); }
 

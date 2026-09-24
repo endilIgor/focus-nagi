@@ -22,10 +22,7 @@ import styles from "./AppShell.module.css";
 const NAV: Array<[string, string]> = [
   ["hoje", "Hoje"],
   ["foco", "Foco"],
-  ["tarefas", "Tarefas"],
-  ["projetos", "Projetos"],
-  ["metas", "Metas"],
-  ["notas", "Notas"],
+  ["checklist", "Checklist"],
   ["diario", "Diário"],
   ["analytics", "Analytics"],
 ];

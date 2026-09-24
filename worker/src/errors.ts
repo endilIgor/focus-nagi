@@ -27,6 +27,8 @@ export const DOMAIN_ERRORS: Readonly<Record<string, readonly [ContentfulStatusCo
   UNAUTHENTICATED: [401, "Authentication required."],
   PROJECT_NOT_FOUND: [404, "Project not found."],
   TASK_NOT_FOUND: [404, "Task not found."],
+  CHECKLIST_NOT_FOUND: [404, "Checklist item not found."],
+  VALIDATION_ERROR: [400, "Invalid input."],
   SUBTASK_NOT_FOUND: [404, "Subtask not found."],
   GOAL_NOT_FOUND: [404, "Goal not found."],
   NOTE_NOT_FOUND: [404, "Note not found."],

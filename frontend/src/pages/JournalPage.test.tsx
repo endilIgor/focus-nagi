@@ -56,7 +56,7 @@ describe("JournalPage", () => {
     }));
     await waitFor(() => expect(editor).toHaveValue(""));
     expect(screen.getByText("Meu novo registro sem cortes")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Entrada salva.");
+    expect(screen.getByRole("status")).toHaveTextContent("Dia salvo.");
   });
 
   it("groups multiple saved records under their day without replacing prior text", async () => {

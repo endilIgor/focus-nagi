@@ -173,6 +173,23 @@ export interface GoalProgressResponse {
   periodEnd: string;
 }
 
+export interface ChecklistItemResponse {
+  id: number;
+  title: string;
+  date: string;
+  completed: boolean;
+  createdAt: string;
+}
+
+export interface ChecklistItemCreateRequest {
+  title: string;
+  date: string;
+}
+
+export interface ChecklistItemUpdateRequest {
+  completed: boolean;
+}
+
 export interface JournalEntryResponse {
   id: number;
   entryDate: string;

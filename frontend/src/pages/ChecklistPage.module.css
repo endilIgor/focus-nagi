@@ -1,0 +1,15 @@
+.page { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.dateLabel, .form label { color: var(--text-mute); font: 500 12px "JetBrains Mono", monospace; }
+.page input[type="date"], .form input { min-height: 40px; background: rgba(255,255,255,.04); border: 1px solid var(--hairline); color: var(--text-bright); padding: 8px 12px; font: 500 14px "Barlow", sans-serif; }
+.panel { width: 100%; border: 1px solid var(--hairline); background: rgba(255,255,255,.025); padding: 20px; }
+.form { display: grid; gap: 10px; }
+.formRow { display: flex; gap: 10px; }
+.formRow input { flex: 1; min-width: 0; }
+.list { list-style: none; margin: 16px 0 0; padding: 0; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+.item { display: flex; gap: 12px; align-items: center; min-width: 0; cursor: pointer; overflow-wrap: anywhere; }
+.item input { accent-color: var(--acc); width: 18px; height: 18px; flex: none; }
+.done { text-decoration: line-through; color: var(--text-faint); }
+.remove { background: transparent; border: 0; color: var(--text-mute); cursor: pointer; padding: 8px; }
+.remove:hover { color: #ff8098; }
+@media(max-width: 600px) { .formRow { flex-direction: column; } .panel { padding: 14px; } }

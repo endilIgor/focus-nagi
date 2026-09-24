@@ -10,6 +10,19 @@
   display: flex;
   gap: 6px;
 }
+.rangeRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  color: var(--text-mute);
+  font: 500 11px "JetBrains Mono", monospace;
+}
+.rangeRow label { display: flex; align-items: center; gap: 10px; }
+.rangeRow input { color: var(--text-primary); color-scheme: dark; background: transparent; border: 1px solid var(--hairline); padding: 7px; font: inherit; }
+.rating { display: block; margin-top: 12px; color: var(--acc); font: 700 24px "Chakra Petch", sans-serif; }
+.panel p, .panel small { color: var(--text-mute); }
 
 .summary {
   display: grid;

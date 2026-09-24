@@ -187,6 +187,17 @@ describe("FocusPage session actions", () => {
     expect(mockedApi.current).toHaveBeenCalledTimes(1);
   });
 
+  it("starts a free session without exposing retired task and project selectors", async () => {
+    mockedApi.current.mockResolvedValue(undefined);
+    mockedApi.start.mockResolvedValue(session());
+    renderPage();
+    await screen.findByRole("button", { name: "Iniciar sessão" });
+    expect(screen.queryByText("TAREFA")).not.toBeInTheDocument();
+    expect(screen.queryByText("PROJETO")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Iniciar sessão" }));
+    await waitFor(() => expect(mockedApi.start).toHaveBeenCalledWith(expect.objectContaining({ taskId: null, projectId: null })));
+  });
+
   it("disables every session action button while finish is pending, keeping one request", async () => {
     let resolveFinish!: (value: FocusSessionResponse) => void;
     mockedApi.current.mockResolvedValue(session());

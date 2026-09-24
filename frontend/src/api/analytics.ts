@@ -5,10 +5,11 @@ import type {
   FocusSummaryResponse,
   HourFocusResponse,
   MonthFocusResponse,
-  ProjectFocusBreakdownResponse,
   StreaksResponse,
   WeekFocusResponse,
 } from "./types";
+
+import type { ChecklistDay } from "../utils/analytics";
 
 export const analyticsApi = {
   summary: (period: AnalyticsPeriod) =>
@@ -24,5 +25,6 @@ export const analyticsApi = {
     apiGet<MonthFocusResponse[]>("/api/analytics/focus/by-month", { from, to }),
   byHour: (from?: string, to?: string) =>
     apiGet<HourFocusResponse[]>("/api/analytics/focus/by-hour", { from, to }),
-  byProject: () => apiGet<ProjectFocusBreakdownResponse[]>("/api/analytics/focus/by-project"),
+  checklistDaily: (from: string, to: string) =>
+    apiGet<ChecklistDay[]>("/api/analytics/checklist/daily", { from, to }),
 };

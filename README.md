@@ -1,7 +1,8 @@
 # Focus Nagi
 
-Aplicação pessoal single-owner de foco e produtividade (pomodoro, tarefas, projetos, metas, notas,
-diário e analytics).
+Aplicação pessoal single-owner de foco e produtividade (pomodoro, checklist diário,
+diário e analytics). Os dados anteriores de tarefas, projetos, metas e notas são preservados
+no banco para não causar perda de histórico, mas essas seções não aparecem mais na interface.
 
 ## Arquitetura
 
@@ -38,7 +39,7 @@ traduzidas para `supabase/migrations` e continuam disponíveis no histórico do 
 frontend/                 SPA (Vite) + scripts/vercel-output.mjs (config do Vercel) + vercel.json
 worker/                   Worker (src/routes/*, auth, db, validation) + testes (vitest + PGlite)
 supabase/migrations/      schema, RLS/grants, funções api_* (projetos, tarefas, foco, metas,
-                          notas/diário, today/analytics)
+                          notas/diário, checklist diário, today/analytics)
 supabase/config.toml      config do Supabase CLI (signup público desabilitado)
 scripts/migrate-data/     export-legacy.sh, import-supabase.sh, staging/transform/verify.sql
 ```
@@ -152,7 +153,7 @@ usuário válido do projeto, isolado por RLS), `SUPABASE_JWT_SECRET` (opcional, 
 3. Deploy. O build roda `vite build` e depois `node scripts/vercel-output.mjs`, que gera
    `.vercel/output` (Build Output API v3) com:
    - `/api/*` → rewrite (proxy) para `${API_ORIGIN}/api/*` — o navegador continua em URLs relativas;
-   - arquivos estáticos, depois fallback SPA para `index.html` (rotas `/hoje`, `/tarefas`, ...);
+   - arquivos estáticos, depois fallback SPA para `index.html` (rotas `/hoje`, `/checklist`, ...);
    - headers de segurança (CSP com `connect-src` limitado ao Supabase, `frame-ancestors 'none'`,
      `nosniff`, HSTS) e cache imutável para `/assets/*`.
 
@@ -249,8 +250,9 @@ internos.
 | Metas | `POST/GET /api/goals`, `GET/PATCH /api/goals/{id}`, `POST .../{id}/complete\|archive\|restore`, `GET .../{id}/progress` |
 | Notas | `POST/GET /api/notes` (`pinned`, `projectId`, `q`), `GET/PATCH/DELETE /api/notes/{id}`, `POST .../{id}/pin\|unpin` |
 | Diário | `POST /api/journal`, `GET /api/journal?date=`, `GET .../range?from=&to=`, `GET .../recent`, `PATCH/DELETE /api/journal/{id}` |
+| Checklist | `GET /api/checklist?date=`, `POST /api/checklist`, `PATCH/DELETE /api/checklist/{id}` |
 | Hoje | `GET /api/today` |
-| Analytics | `GET /api/analytics/focus/summary?period=TODAY\|WEEK\|MONTH`, `.../streaks`, `.../heatmap?from=&to=`, `.../focus/by-day\|by-week\|by-month\|by-hour`, `.../focus/by-project` |
+| Analytics | `GET /api/analytics/focus/summary?period=TODAY\|WEEK\|MONTH`, `.../streaks`, `.../heatmap?from=&to=`, `.../focus/by-day\|by-week\|by-month\|by-hour`, `.../focus/by-project`, `.../checklist/daily?from=&to=` |
 
 Mudanças intencionais de contrato:
 
@@ -294,9 +296,11 @@ Mudanças intencionais de contrato:
 ## Decisões e limitações conscientes do frontend
 
 - O protótipo de design original tinha um medidor de "nível/XP" e um "log do sistema" puramente
-  decorativos, sem contraparte na API; foram removidos para não fabricar dados. O selo "+XP" nas
-  tarefas é só um rótulo estético sobre `estimatedMinutes`.
+  decorativos, sem contraparte na API; foram removidos para não fabricar dados.
 - A escolha de paleta de cores (4 temas) é client-side (`localStorage`).
-- No painel "Vincular" da tela de Foco, tarefa/projeto/notas só podem ser definidos ao *iniciar* uma
-  sessão (é o que `POST /api/focus-sessions` aceita).
-- Analytics só suporta `TODAY`/`WEEK`/`MONTH`.
+- Na tela de Foco, sessões novas são livres; vínculos de sessões antigas continuam visíveis no histórico.
+  Notas da sessão só podem ser definidas ao iniciar uma sessão.
+- A interface de analytics permite selecionar uma semana ISO ou um mês específico; a classificação
+  semanal combina o tempo de foco concluído e a proporção de itens diários concluídos. A semana
+  corrente recebe uma avaliação parcial no sábado/domingo, e a avaliação final fica disponível
+  a partir da segunda-feira.

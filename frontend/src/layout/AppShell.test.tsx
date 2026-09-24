@@ -116,6 +116,15 @@ describe("AppShell global focus timer completion", () => {
     expect(mockedFinish).not.toHaveBeenCalled();
   });
 
+  it("shows only the simplified sections in navigation", () => {
+    mockSession.current = null;
+    renderShell();
+    expect(screen.getByRole("link", { name: "Checklist" })).toHaveAttribute("href", "/checklist");
+    for (const section of ["Tarefas", "Projetos", "Metas", "Notas"]) {
+      expect(screen.queryByRole("link", { name: section })).not.toBeInTheDocument();
+    }
+  });
+
   it("turns the FN logo purple while a focus session is active", () => {
     mockNow.current = Date.parse("2026-09-22T12:01:00Z");
 

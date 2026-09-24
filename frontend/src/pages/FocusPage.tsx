@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { focusSessionsApi } from "../api/focusSessions";
-import { fetchAllContent } from "../api/pagination";
 import { projectsApi } from "../api/projects";
 import { tasksApi } from "../api/tasks";
 import {
@@ -36,8 +35,6 @@ export function FocusPage() {
   const queryClient = useQueryClient();
   const now = useClockTick(1000);
   const [plannedMinutes, setPlannedMinutes] = useState(50);
-  const [taskId, setTaskId] = useState<number | "">("");
-  const [projectId, setProjectId] = useState<number | "">("");
   const [notes, setNotes] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [historyPage, setHistoryPage] = useState(0);
@@ -46,17 +43,6 @@ export function FocusPage() {
   const globalFinishPending = useIsMutating({ mutationKey: FINISH_FOCUS_SESSION_MUTATION_KEY }) > 0;
   const session = sessionQuery.data;
   const active = session?.status === "RUNNING" || session?.status === "PAUSED";
-
-  const tasksQuery = useQuery({
-    queryKey: ["tasks", "for-session-select"],
-    queryFn: () => fetchAllContent((page, size) => tasksApi.list({ page, size })),
-    enabled: !active,
-  });
-  const projectsQuery = useQuery({
-    queryKey: ["projects", "active-for-select"],
-    queryFn: () => fetchAllContent((page, size) => projectsApi.list("ACTIVE", page, size)),
-    enabled: !active,
-  });
   const linkedTaskQuery = useQuery({
     queryKey: ["task", session?.taskId],
     queryFn: () => tasksApi.get(session!.taskId!),
@@ -86,8 +72,8 @@ export function FocusPage() {
     mutationFn: () =>
       focusSessionsApi.start({
         plannedFocusMinutes: plannedMinutes,
-        taskId: taskId === "" ? null : taskId,
-        projectId: projectId === "" ? null : projectId,
+        taskId: null,
+        projectId: null,
         notes: notes.trim() ? notes.trim() : null,
       }),
     onMutate: () => queryClient.cancelQueries({ queryKey: CURRENT_FOCUS_SESSION_KEY }),
@@ -136,9 +122,6 @@ export function FocusPage() {
 
   const statusLabel = session?.status === "RUNNING" ? "EM EXECUÇÃO" : session?.status === "PAUSED" ? "PAUSADA" : "PRONTA";
   const circumference = 2 * Math.PI * 150;
-
-  const taskOptions = (tasksQuery.data ?? []).filter((t) => t.status === "TODO" || t.status === "IN_PROGRESS");
-  const projectOptions = projectsQuery.data ?? [];
 
   return (
     <div className={styles.grid}>
@@ -276,21 +259,11 @@ export function FocusPage() {
 
       <div className={styles.side}>
         <div className={styles.linkPanel}>
-          <div className={styles.linkTitle}>Vincular</div>
+          <div className={styles.linkTitle}>Sessão</div>
           {active ? (
             <>
-              <div className="fn-field">
-                <span>TAREFA</span>
-                <div style={{ font: "400 13px 'JetBrains Mono',monospace", color: "#D8D4E6" }}>
-                  {linkedTaskQuery.data?.title ?? "— nenhuma —"}
-                </div>
-              </div>
-              <div className="fn-field" style={{ marginTop: 12 }}>
-                <span>PROJETO</span>
-                <div style={{ font: "400 13px 'JetBrains Mono',monospace", color: "#D8D4E6" }}>
-                  {linkedProjectQuery.data?.title ?? "— nenhum —"}
-                </div>
-              </div>
+              {session?.taskId && <div className="fn-field">Tarefa anterior: {linkedTaskQuery.data?.title ?? `#${session.taskId}`}</div>}
+              {session?.projectId && <div className="fn-field">Projeto anterior: {linkedProjectQuery.data?.title ?? `#${session.projectId}`}</div>}
               <div className="fn-field" style={{ marginTop: 12 }}>
                 <span>NOTAS DA SESSÃO</span>
                 <div style={{ font: "400 13px 'Barlow',sans-serif", color: "#B9B4C9" }}>
@@ -298,41 +271,11 @@ export function FocusPage() {
                 </div>
               </div>
               <div className={styles.linkNote}>
-                Vínculo e notas são definidos ao iniciar a sessão e não podem ser alterados enquanto ela está ativa.
+                As notas são definidas ao iniciar a sessão e não podem ser alteradas enquanto ela está ativa.
               </div>
             </>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <label className="fn-field">
-                <span>TAREFA</span>
-                <select
-                  className="fn-select"
-                  value={taskId}
-                  onChange={(e) => setTaskId(e.target.value ? Number(e.target.value) : "")}
-                >
-                  <option value="">— sem tarefa —</option>
-                  {taskOptions.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      #{t.id} {t.title.slice(0, 36)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="fn-field">
-                <span>PROJETO</span>
-                <select
-                  className="fn-select"
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value ? Number(e.target.value) : "")}
-                >
-                  <option value="">— sem projeto —</option>
-                  {projectOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <label className="fn-field">
                 <span>NOTAS DA SESSÃO</span>
                 <textarea

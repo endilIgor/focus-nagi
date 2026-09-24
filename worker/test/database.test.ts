@@ -9,7 +9,7 @@ let db: PGlite;
 let alice: string;
 let bob: string;
 
-const TABLES = ["project", "task", "subtask", "focus_session", "goal", "note", "journal_entry"];
+const TABLES = ["project", "task", "subtask", "focus_session", "goal", "note", "journal_entry", "daily_checklist"];
 
 beforeAll(async () => {
   db = await createTestDatabase();

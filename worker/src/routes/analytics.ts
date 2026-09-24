@@ -10,6 +10,12 @@ const range = (c: AppContext, required: boolean) => ({
 });
 
 export function registerAnalyticsRoutes(app: Hono<AppEnv>): void {
+  app.get("/api/analytics/checklist/daily", async (c) =>
+    c.json(await callRpc(c, "api_checklist_daily", {
+      p_from: dateQuery(c, "from", true),
+      p_to: dateQuery(c, "to", true),
+    })),
+  );
   app.get("/api/analytics/focus/summary", async (c) => {
     const period = enumQuery(c, "period", ANALYTICS_PERIODS) ?? "TODAY";
     return c.json(await callRpc(c, "api_analytics_summary", { p_period: period, p_tz: c.var.timeZone }));

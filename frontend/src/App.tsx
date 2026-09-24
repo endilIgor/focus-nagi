@@ -5,12 +5,9 @@ import { RequireAuth } from "./auth/RequireAuth";
 import { AppShell } from "./layout/AppShell";
 import { ThemeProvider } from "./theme/ThemeContext";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { ChecklistPage } from "./pages/ChecklistPage";
 import { FocusPage } from "./pages/FocusPage";
-import { GoalsPage } from "./pages/GoalsPage";
 import { JournalPage } from "./pages/JournalPage";
-import { NotesPage } from "./pages/NotesPage";
-import { ProjectsPage } from "./pages/ProjectsPage";
-import { TasksPage } from "./pages/TasksPage";
 import { TodayPage } from "./pages/TodayPage";
 
 export function App() {
@@ -29,10 +26,11 @@ export function App() {
             >
               <Route path="/hoje" element={<TodayPage />} />
               <Route path="/foco" element={<FocusPage />} />
-              <Route path="/tarefas" element={<TasksPage />} />
-              <Route path="/projetos" element={<ProjectsPage />} />
-              <Route path="/metas" element={<GoalsPage />} />
-              <Route path="/notas" element={<NotesPage />} />
+              <Route path="/checklist" element={<ChecklistPage />} />
+              <Route path="/tarefas" element={<Navigate to="/checklist" replace />} />
+              <Route path="/projetos" element={<Navigate to="/checklist" replace />} />
+              <Route path="/metas" element={<Navigate to="/checklist" replace />} />
+              <Route path="/notas" element={<Navigate to="/checklist" replace />} />
               <Route path="/diario" element={<JournalPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/" element={<Navigate to="/hoje" replace />} />

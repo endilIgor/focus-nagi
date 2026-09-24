@@ -97,7 +97,7 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 16px;
 }
@@ -116,7 +116,12 @@
 }
 .metricCard:nth-child(2) { animation-delay: 45ms; }
 .metricCard:nth-child(3) { animation-delay: 90ms; }
-.metricCard:nth-child(4) { animation-delay: 135ms; }
+.missionsTitle {
+  margin: 12px 0;
+  font: 600 16px "Chakra Petch", sans-serif;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
 .metricTint {
   position: absolute;
   top: 0;
@@ -156,177 +161,8 @@
   margin-top: 12px;
 }
 
-.content {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-  gap: 16px;
-}
-.col {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.panelHead {
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--hairline);
-  display: flex;
-  align-items: center;
-  gap: 11px;
-}
-.panelHeadBar {
-  width: 16px;
-  height: 2px;
-  background: var(--acc);
-}
-.panelTitle {
-  font: 600 13px "Chakra Petch", sans-serif;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-.panelCount {
-  font: 500 10px "JetBrains Mono", monospace;
-  color: var(--text-faint);
-  letter-spacing: 0.14em;
-}
-
-.taskRow {
-  padding: 13px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.checkbox {
-  width: 20px;
-  height: 20px;
-  flex: none;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: transparent;
-  color: #07070c;
-  font: 700 11px "JetBrains Mono", monospace;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-}
-.taskTitle {
-  font: 500 15px "Barlow", sans-serif;
-  color: var(--text);
-}
-.taskMeta {
-  font: 500 9px "JetBrains Mono", monospace;
-  letter-spacing: 0.14em;
-  color: var(--text-faint);
-  margin-top: 5px;
-}
-.prioBadge {
-  flex: none;
-  font: 500 9px "JetBrains Mono", monospace;
-  letter-spacing: 0.16em;
-  padding: 4px 8px;
-  border: 1px solid;
-}
-
-.overduePanel {
-  border: 1px solid rgba(244, 63, 94, 0.28);
-  background: linear-gradient(180deg, rgba(244, 63, 94, 0.07), rgba(255, 255, 255, 0.008));
-}
-.overdueHead {
-  padding: 13px 20px;
-  border-bottom: 1px solid rgba(244, 63, 94, 0.18);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.overdueDot {
-  width: 7px;
-  height: 7px;
-  background: #f43f5e;
-  animation: fnPulse 1.7s ease-in-out infinite;
-}
-.overdueRow {
-  padding: 12px 20px;
-  border-bottom: 1px solid rgba(244, 63, 94, 0.12);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.lateLabel {
-  font: 700 11px "JetBrains Mono", monospace;
-  color: #ff8098;
-  width: 72px;
-}
-
-.sidePanel {
-  border: 1px solid var(--hairline);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
-  padding: 18px 20px;
-}
-.sideHead {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.sideHeadBar {
-  width: 16px;
-  height: 2px;
-  background: var(--acc2);
-}
-.sideTitle {
-  font: 600 12px "Chakra Petch", sans-serif;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-.goalRow {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.goalTitleRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
-}
-.goalTitle {
-  font: 500 14px "Barlow", sans-serif;
-}
-.goalRatio {
-  font: 700 12px "JetBrains Mono", monospace;
-}
-.goalMeta {
-  font: 400 9px "JetBrains Mono", monospace;
-  letter-spacing: 0.16em;
-  color: var(--text-faint);
-}
-
-.projectRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.28);
-}
-.projectTint {
-  width: 3px;
-  height: 26px;
-}
-.projectTitle {
-  flex: 1;
-  min-width: 0;
-  font: 500 14px "Barlow", sans-serif;
-}
-.projectMinutes {
-  font: 700 11px "JetBrains Mono", monospace;
-  color: #d8d4e6;
-}
-
 @media (max-width: 960px) {
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .content { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {

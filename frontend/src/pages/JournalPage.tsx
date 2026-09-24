@@ -71,7 +71,7 @@ export function JournalPage() {
           </div>
           {error && <div className="fn-error-banner">{error}</div>}
           {recentQuery.isError && <div className="fn-error-banner">Não foi possível carregar os registros. Recarregue a página e tente novamente.</div>}
-          {saved && !error && <div role="status">Entrada salva.</div>}
+          {saved && !error && <div role="status">Dia salvo.</div>}
           <textarea
             className="fn-textarea"
             rows={13}

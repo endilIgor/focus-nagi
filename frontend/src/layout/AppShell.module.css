@@ -1,225 +1,267 @@
-.header {
-  border-bottom: 1px solid var(--hairline);
-  background: rgba(6, 6, 10, 0.8);
-  backdrop-filter: blur(16px);
-  position: sticky;
-  top: 0;
-  z-index: 30;
+.frame {
+  position: relative;
+  z-index: 2;
 }
 
-.headerInner {
-  max-width: 1460px;
-  margin: 0 auto;
-  padding: 13px 30px 0;
+/* Floating glass pill: brand, navigation, live session status and logout on one line. */
+.header {
+  position: relative;
+  z-index: 5;
+  width: calc(100% - 48px);
+  max-width: 1280px;
+  margin: 24px auto 0;
+  padding: 8px 22px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  column-gap: 16px;
-  row-gap: 10px;
+  column-gap: 24px;
+  row-gap: 4px;
+  border-radius: 28px;
+  background: rgba(5, 6, 15, 0.55);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 1px rgba(216, 236, 248, 0.14), inset 0 0 0 1px rgba(186, 215, 247, 0.1),
+    0 16px 32px rgba(0, 0, 0, 0.3);
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
 }
 .logo {
-  width: 32px;
-  height: 32px;
-  background: var(--acc);
-  display: grid;
-  place-items: center;
-  font: 700 12px "JetBrains Mono", monospace;
-  color: #07070c;
-  box-shadow: 0 0 20px var(--glow);
-  clip-path: polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  background: var(--violet);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  transition: background-color 0.3s ease, filter 0.3s ease;
+}
+.logoFacet {
+  position: absolute;
+  left: 30%;
+  right: 0;
+  top: 40%;
+  bottom: 0;
+  background: #15846e;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  opacity: 0.9;
+  transition: background-color 0.3s ease;
 }
 .logo[data-focus-state="focusing"] {
-  background: #a855f7;
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.42);
+  filter: drop-shadow(0 0 6px rgba(128, 82, 255, 0.8));
+}
+.logo[data-focus-state="focusing"] .logoFacet {
+  background: var(--amber);
 }
 .logo[data-focus-state="completed"] {
-  background: #d8d4e6;
-  box-shadow: 0 0 18px rgba(216, 212, 230, 0.3);
+  background: var(--text-ice);
 }
-.brandTitle {
-  font: 700 16px "Chakra Petch", sans-serif;
-  letter-spacing: 0.2em;
-}
-.brandTitle span {
-  color: var(--acc2);
+.brandName {
+  font: 500 16px var(--font-sans);
+  letter-spacing: -0.01em;
+  color: #fff;
+  white-space: nowrap;
 }
 
-.pill {
+.nav {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 88px);
+}
+.navItem {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 11px;
-  border: 1px solid var(--hairline);
-  background: rgba(255, 255, 255, 0.03);
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 0 14px;
+  color: var(--text-mute);
+  font: 600 13px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.3s ease;
 }
-.dot {
+.navItem:hover,
+.navItem.active {
+  color: #fff;
+}
+.navItem:focus-visible {
+  outline-offset: -4px;
+  border-radius: 999px;
+}
+/* Single dot that slides under the active section. */
+.navDot {
+  position: absolute;
+  bottom: 2px;
+  left: calc((var(--nav-index) + 0.5) * 100% / 5 - 3px);
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  animation: fnPulse 1.8s ease-in-out infinite;
-}
-.pillLabel {
-  font: 500 10px "JetBrains Mono", monospace;
-  letter-spacing: 0.18em;
-  color: var(--text-mute);
-}
-.pillValue {
-  font: 700 13px "JetBrains Mono", monospace;
-  color: var(--text);
+  background: var(--violet);
+  box-shadow: 0 0 12px var(--violet);
+  transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
 }
 
 .spacer {
   flex: 1;
 }
 
-.streak {
+.status {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.live {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  border: 1px solid var(--hairline);
-  background: rgba(255, 255, 255, 0.03);
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  white-space: nowrap;
 }
-.streakLabel {
-  font: 400 9px "JetBrains Mono", monospace;
-  letter-spacing: 0.2em;
-  color: var(--text-faint);
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3f4959;
+  animation: fnPulse 1.8s ease-in-out infinite;
 }
-.streakValue {
-  font: 700 15px "JetBrains Mono", monospace;
-  color: var(--acc);
+.liveDot[data-state="running"] {
+  background: var(--amber);
 }
-.spark {
-  display: flex;
-  gap: 2px;
-  align-items: flex-end;
-  height: 14px;
+.liveDot[data-state="paused"] {
+  background: var(--text-dim);
 }
-.sparkBar {
-  width: 3px;
-  transition: height 0.45s ease, background-color 0.2s ease;
+.liveValue {
+  color: #fff;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 
 .logoutBtn {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
   background: transparent;
-  border: 1px solid var(--hairline);
   color: var(--text-mute);
-  padding: 9px 12px;
-  font: 500 9px "JetBrains Mono", monospace;
-  letter-spacing: 0.2em;
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
   cursor: pointer;
+  transition: color 0.2s ease;
 }
 .logoutBtn:hover {
-  border-color: rgba(244, 63, 94, 0.5);
-  color: #ff8098;
+  color: #fff;
 }
 .logoutError {
   position: absolute;
-  top: 62px;
-  right: 0;
+  top: calc(100% + 8px);
+  right: 16px;
   max-width: 320px;
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 128, 152, 0.45);
+  padding: 10px 12px;
+  border-radius: 6px;
   background: rgba(20, 10, 18, 0.96);
-  color: #ff8098;
-  font: 500 10px "JetBrains Mono", monospace;
-  letter-spacing: 0.04em;
+  box-shadow: inset 0 0 0 1px rgba(255, 128, 152, 0.3);
+  color: #ff9aae;
+  font: 400 13px var(--font-sans);
   z-index: 20;
 }
 
-.nav {
-  max-width: 1460px;
-  margin: 0 auto;
-  padding: 0 30px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  margin-top: 11px;
-}
-.navItem {
+.notice {
   position: relative;
-  background: transparent;
-  border: none;
-  color: var(--text-mute);
-  padding: 13px 17px;
-  font: 600 12px "Chakra Petch", sans-serif;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  cursor: pointer;
+  z-index: 5;
+  max-width: 1280px;
+  margin: 28px auto 0;
+  padding: 0 36px;
   display: flex;
   align-items: center;
-  text-decoration: none;
-  transition: color 0.18s ease, background-color 0.18s ease;
+  gap: 14px;
+  animation: fnRise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.navItem:hover {
-  color: var(--text-bright);
+.noticeTag {
+  flex: none;
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--amber);
 }
-.navItem.active {
-  background: rgba(255, 255, 255, 0.055);
-  color: var(--text-bright);
+.noticeText {
+  flex: 1;
+  font: 200 18px var(--font-sans);
+  color: #fff;
 }
-.navLine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: transparent;
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
-}
-.navItem.active .navLine {
-  background: var(--acc);
-  box-shadow: 0 0 12px var(--acc);
-  transform: scaleX(1);
+.noticeError .noticeTag,
+.noticeError .noticeText {
+  color: #ff9aae;
 }
 
 .main {
-  max-width: 1460px;
-  margin: 0 auto;
-  padding: 28px 30px 80px;
   position: relative;
+  z-index: 2;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 72px 36px 120px;
 }
 .main > * {
   animation: fnPageEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.completionNotice {
-  max-width: 1400px;
-  margin: 18px auto 0;
-  padding: 12px 18px;
-  border: 1px solid var(--acc);
-  background: var(--soft);
-  color: var(--text-bright);
-  font: 600 12px "JetBrains Mono", monospace;
-  letter-spacing: 0.04em;
+/* Below the one-line width the nav takes its own full-width row under brand and status. */
+@media (max-width: 960px) {
+  .nav {
+    order: 3;
+    flex: 1 0 100%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
-.autoFinishError {
-  max-width: 1400px;
-  margin: 18px auto 0;
-  padding: 12px 18px;
-  border: 1px solid rgba(255, 128, 152, 0.5);
-  background: rgba(244, 63, 94, 0.12);
-  color: #ff8098;
-  font: 600 12px "JetBrains Mono", monospace;
+@media (max-width: 640px) {
+  .header {
+    width: calc(100% - 24px);
+    margin-top: 12px;
+    padding: 6px 14px;
+    column-gap: 12px;
+    border-radius: 22px;
+  }
+  .status {
+    gap: 12px;
+  }
+  .navItem {
+    font-size: 11px;
+    letter-spacing: 0.01em;
+  }
+  .notice {
+    margin-top: 20px;
+    padding: 0 20px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .noticeText {
+    font-size: 16px;
+  }
+  .main {
+    padding: 40px 16px 80px;
+  }
+  .logoutError {
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
 }
 
-@media (max-width: 720px) {
-  .headerInner { padding: 10px 16px 0; column-gap: 10px; }
-  .brandTitle { font-size: 14px; }
-  .spacer, .streak { display: none; }
-  .nav { padding: 0 16px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
-  .navItem { flex: none; padding: 11px 13px; font-size: 11px; }
-  .main { padding: 22px 16px 64px; }
-  .completionNotice, .autoFinishError { margin: 14px 16px 0; }
-  .logoutError { top: 54px; right: 16px; left: 16px; max-width: none; }
+@media (max-width: 380px) {
+  .brandName {
+    font-size: 14px;
+  }
+  .live {
+    gap: 6px;
+    font-size: 11px;
+  }
 }

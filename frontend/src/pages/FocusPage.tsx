@@ -3,14 +3,16 @@ import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/
 import { focusSessionsApi } from "../api/focusSessions";
 import { projectsApi } from "../api/projects";
 import { tasksApi } from "../api/tasks";
+import { FocusDurationMenu } from "../components/FocusDurationMenu";
+import { ParticleAnchor } from "../components/particles/ParticleScene";
 import {
+  applyFinishedFocusSession,
   computeElapsedSeconds,
   CURRENT_FOCUS_SESSION_KEY,
   FINISH_FOCUS_SESSION_MUTATION_KEY,
   useCurrentFocusSession,
 } from "../hooks/useFocusSession";
 import { useClockTick } from "../hooks/useClock";
-import { useTheme } from "../theme/ThemeContext";
 import { describeApiError } from "../utils/errors";
 import { FOCUS_SESSION_STATUS_LABEL } from "../utils/labels";
 import { primeTimerAlarm } from "../utils/timerAlarm";
@@ -18,20 +20,11 @@ import { requestTimerNotificationPermission } from "../utils/timerNotification";
 import type { FocusSessionResponse } from "../api/types";
 import styles from "./FocusPage.module.css";
 
-const PRESETS = [25, 50, 60, 90, 15];
-const STATUS_STYLE: Record<string, [string, string]> = {
-  RUNNING: ["rgba(255,255,255,.2)", "#22D3EE"],
-  COMPLETED: ["rgba(255,255,255,.14)", "#C9C3DA"],
-  CANCELLED: ["rgba(244,63,94,.4)", "#FF8098"],
-  PAUSED: ["rgba(245,200,107,.4)", "#F7CE7E"],
-};
-
 function pad(n: number): string {
   return String(Math.max(0, Math.trunc(n))).padStart(2, "0");
 }
 
 export function FocusPage() {
-  const { theme } = useTheme();
   const queryClient = useQueryClient();
   const now = useClockTick(1000);
   const [plannedMinutes, setPlannedMinutes] = useState(50);
@@ -42,7 +35,9 @@ export function FocusPage() {
   const sessionQuery = useCurrentFocusSession();
   const globalFinishPending = useIsMutating({ mutationKey: FINISH_FOCUS_SESSION_MUTATION_KEY }) > 0;
   const session = sessionQuery.data;
-  const active = session?.status === "RUNNING" || session?.status === "PAUSED";
+  const running = session?.status === "RUNNING";
+  const paused = session?.status === "PAUSED";
+  const active = running || paused;
   const linkedTaskQuery = useQuery({
     queryKey: ["task", session?.taskId],
     queryFn: () => tasksApi.get(session!.taskId!),
@@ -88,7 +83,7 @@ export function FocusPage() {
 
   function useSessionAction(
     fn: (id: number) => Promise<FocusSessionResponse>,
-    clearsSession = false,
+    applyResult: (data: FocusSessionResponse) => void | Promise<void> = setCurrentSession,
   ) {
     return useMutation({
       mutationFn: () => fn(session!.id),
@@ -96,7 +91,7 @@ export function FocusPage() {
       onSuccess: async (data) => {
         await queryClient.cancelQueries({ queryKey: CURRENT_FOCUS_SESSION_KEY });
         setActionError(null);
-        setCurrentSession(clearsSession ? null : data);
+        await applyResult(data);
         invalidateAfterAction();
       },
       onError: (err: unknown) => setActionError(describeApiError(err)),
@@ -105,8 +100,11 @@ export function FocusPage() {
 
   const pauseMutation = useSessionAction(focusSessionsApi.pause);
   const resumeMutation = useSessionAction(focusSessionsApi.resume);
-  const finishMutation = useSessionAction(focusSessionsApi.finish, true);
-  const cancelMutation = useSessionAction(focusSessionsApi.cancel, true);
+  // Finish moves the idle base to this session's endedAt; cancel never does.
+  const finishMutation = useSessionAction(focusSessionsApi.finish, (data) =>
+    applyFinishedFocusSession(queryClient, data),
+  );
+  const cancelMutation = useSessionAction(focusSessionsApi.cancel, () => setCurrentSession(null));
   const sessionActionPending =
     pauseMutation.isPending ||
     resumeMutation.isPending ||
@@ -117,211 +115,222 @@ export function FocusPage() {
   const plannedSecondsActive = (session?.plannedFocusMinutes ?? plannedMinutes) * 60;
   const remaining = Math.max(0, plannedSecondsActive - elapsedSeconds);
   const prog = Math.min(1, elapsedSeconds / Math.max(1, plannedSecondsActive));
+  const pct = Math.round(prog * 100);
   const clockText = `${pad(Math.floor(remaining / 60))}:${pad(remaining % 60)}`;
-  const timerCompletionPending = session?.status === "RUNNING" && remaining === 0 && globalFinishPending;
+  const timerCompletionPending = running && remaining === 0 && globalFinishPending;
+  const actionsDisabled = sessionActionPending || timerCompletionPending;
 
-  const statusLabel = session?.status === "RUNNING" ? "EM EXECUÇÃO" : session?.status === "PAUSED" ? "PAUSADA" : "PRONTA";
-  const circumference = 2 * Math.PI * 150;
+  const liveState = running ? "running" : paused ? "paused" : "idle";
+  const statusTitle = running ? "Em execução." : paused ? "Pausada." : "Pronta.";
+  const history = historyQuery.data;
 
   return (
-    <div className={styles.grid}>
-      <div className={styles.chamber}>
-        <div className={styles.chamberInset} />
-        <div className={styles.chamberHead}>
-          <div>
-            <span className="fn-eyebrow-text">// CÂMARA DE FOCO</span>
-            <div className={styles.chamberStatus}>{statusLabel}</div>
-          </div>
-          <div className={styles.chamberMeta}>
-            <div>PLANEJADO {session?.plannedFocusMinutes ?? plannedMinutes}min</div>
-            <div>PAUSAS {Math.floor((session?.pausedSecondsAccum ?? 0) / 60)}min</div>
-          </div>
-        </div>
-
-        <div className={styles.ringWrap}>
-          <svg viewBox="0 0 340 340" style={{ width: 344, height: 344, transform: "rotate(-90deg)" }}>
-            <circle cx="170" cy="170" r="150" fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="10" />
-            <circle
-              cx="170"
-              cy="170"
-              r="150"
-              fill="none"
-              stroke={theme.acc}
-              strokeWidth="10"
-              strokeDasharray={`${circumference * (active ? prog : 0)} ${circumference}`}
-              style={{ filter: `drop-shadow(0 0 14px ${theme.glow})`, transition: "stroke-dasharray .9s linear" }}
-            />
-            <circle cx="170" cy="170" r="132" fill="none" stroke="rgba(255,255,255,.05)" strokeWidth="1" strokeDasharray="2 7" />
-            <circle cx="170" cy="170" r="163" fill="none" stroke="rgba(255,255,255,.04)" strokeWidth="1" />
-          </svg>
-          <div style={{ position: "absolute", textAlign: "center" }}>
+    <div className={styles.page}>
+      <section className={`fn-hero ${styles.chamber}`}>
+        <ParticleAnchor className={styles.ring} shape="ring" progress={active ? prog : 0} running={running}>
+          <div className={styles.clock}>
             <div className={styles.clockText}>{active ? clockText : `${pad(plannedMinutes)}:00`}</div>
-            <div className={styles.clockSub}>
-              {active ? (remaining === 0 ? "FINALIZANDO..." : `RESTANTE · ${Math.round(prog * 100)}% CONCLUÍDO`) : "SELECIONE UM BLOCO E INICIE"}
-            </div>
-            <div className={styles.ticks}>
-              {Array.from({ length: 16 }, (_, i) => (
-                <span
-                  key={i}
-                  className={styles.tick}
-                  style={{ background: active && i < Math.round(prog * 16) ? theme.acc2 : "rgba(255,255,255,.12)" }}
-                />
-              ))}
+            <div className={`fn-label ${styles.clockSub}`}>
+              {active
+                ? remaining === 0
+                  ? "Finalizando..."
+                  : `Restante · ${pct}% concluído`
+                : "Selecione um bloco e inicie"}
             </div>
           </div>
-        </div>
+        </ParticleAnchor>
 
-        <div className={styles.presets}>
-          {PRESETS.map((p) => (
-            <button
-              key={p}
-              className="fn-chip"
-              disabled={active}
-              onClick={() => setPlannedMinutes(p)}
-              style={
-                plannedMinutes === p
-                  ? { background: theme.glow, borderColor: theme.acc, color: "#F7F5FC" }
-                  : undefined
-              }
-            >
-              {p} MIN
-            </button>
-          ))}
-        </div>
+        <div className="fn-hero-copy">
+          <div className="fn-eyebrow">
+            <span className={styles.liveDot} data-state={liveState} aria-hidden="true" />
+            <span className="fn-eyebrow-text">Câmara de foco</span>
+          </div>
+          <h1 className={`fn-h1 ${styles.status}`}>{statusTitle}</h1>
+          <p className={styles.meta}>
+            Planejado {session?.plannedFocusMinutes ?? plannedMinutes} min · pausas{" "}
+            {Math.floor((session?.pausedSecondsAccum ?? 0) / 60)} min
+          </p>
 
-        {actionError && <div className="fn-error-banner">{actionError}</div>}
+          <div className={styles.duration}>
+            <FocusDurationMenu
+              value={session?.plannedFocusMinutes ?? plannedMinutes}
+              onChange={setPlannedMinutes}
+              disabled={active || startMutation.isPending}
+            />
+          </div>
 
-        <div className={styles.actions}>
-          {!active && (
-            <button
-              className={styles.actionBtn}
-              style={{ flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }}
-              disabled={startMutation.isPending}
-              onClick={() => {
-                primeTimerAlarm();
-                void requestTimerNotificationPermission();
-                startMutation.mutate();
-              }}
-            >
-              {startMutation.isPending ? "Iniciando..." : "Iniciar sessão"}
-            </button>
-          )}
-          {session?.status === "PAUSED" && (
-            <button
-              className={styles.actionBtn}
-              style={{ flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }}
-              disabled={sessionActionPending || timerCompletionPending}
-              onClick={() => {
-                primeTimerAlarm();
-                void requestTimerNotificationPermission();
-                resumeMutation.mutate();
-              }}
-            >
-              Retomar
-            </button>
-          )}
-          {session?.status === "RUNNING" && (
-            <button
-              className={styles.actionBtn}
-              style={{ flex: 1, background: "transparent", borderColor: "rgba(255,255,255,.16)", color: "#E4E0EF" }}
-              disabled={sessionActionPending || timerCompletionPending}
-              onClick={() => pauseMutation.mutate()}
-            >
-              Pausar
-            </button>
-          )}
-          {active && (
-            <button
-              className={styles.actionBtn}
-              style={
-                session?.status === "PAUSED"
-                  ? { flex: 1, background: "transparent", borderColor: "rgba(255,255,255,.16)", color: "#E4E0EF" }
-                  : { flex: 1, background: theme.acc, borderColor: theme.acc, color: "#07070C" }
-              }
-              disabled={sessionActionPending || timerCompletionPending}
-              onClick={() => finishMutation.mutate()}
-            >
-              Finalizar
-            </button>
-          )}
-          {active && (
-            <button
-              className={styles.actionBtn}
-              style={{ flex: "0 0 auto", background: "transparent", borderColor: "rgba(244,63,94,.4)", color: "#FF8098" }}
-              disabled={sessionActionPending || timerCompletionPending}
-              onClick={() => cancelMutation.mutate()}
-            >
-              Cancelar
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className={styles.side}>
-        <div className={styles.linkPanel}>
-          <div className={styles.linkTitle}>Sessão</div>
           {active ? (
-            <>
-              {session?.taskId && <div className="fn-field">Tarefa anterior: {linkedTaskQuery.data?.title ?? `#${session.taskId}`}</div>}
-              {session?.projectId && <div className="fn-field">Projeto anterior: {linkedProjectQuery.data?.title ?? `#${session.projectId}`}</div>}
-              <div className="fn-field" style={{ marginTop: 12 }}>
-                <span>NOTAS DA SESSÃO</span>
-                <div style={{ font: "400 13px 'Barlow',sans-serif", color: "#B9B4C9" }}>
-                  {session?.notes || "—"}
-                </div>
-              </div>
-              <div className={styles.linkNote}>
+            <div className={styles.sessionInfo}>
+              {(session?.taskId || session?.projectId) && (
+                <dl className={styles.links}>
+                  {session?.taskId && (
+                    <div>
+                      <dt className="fn-label">Tarefa anterior</dt>
+                      <dd>{linkedTaskQuery.data?.title ?? `#${session.taskId}`}</dd>
+                    </div>
+                  )}
+                  {session?.projectId && (
+                    <div>
+                      <dt className="fn-label">Projeto anterior</dt>
+                      <dd>{linkedProjectQuery.data?.title ?? `#${session.projectId}`}</dd>
+                    </div>
+                  )}
+                </dl>
+              )}
+              <div className="fn-label">Notas da sessão</div>
+              <div className={styles.sessionNotes}>{session?.notes || "—"}</div>
+              <div className={styles.notesHint}>
                 As notas são definidas ao iniciar a sessão e não podem ser alteradas enquanto ela está ativa.
               </div>
-            </>
+            </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <label className="fn-field">
-                <span>NOTAS DA SESSÃO</span>
-                <textarea
-                  className="fn-textarea"
-                  rows={3}
-                  placeholder="o que precisa sair daqui..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </label>
-            </div>
+            <label className={styles.notesField}>
+              <span className="fn-label">Notas da sessão</span>
+              <textarea
+                className={`fn-underline ${styles.notesInput}`}
+                rows={2}
+                placeholder="o que precisa sair daqui..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </label>
           )}
-        </div>
 
-        <div className={styles.historyPanel}>
-          <div className={styles.historyHead}>
-            <div className={styles.linkTitle} style={{ margin: 0 }}>Histórico</div>
-            <div className="fn-mono-label">
-              {historyQuery.data ? `${historyQuery.data.totalElements} SESSÕES · PÁG ${historyPage + 1}/${Math.max(1, historyQuery.data.totalPages)}` : "…"}
+          {actionError && (
+            <div className={`fn-error-banner ${styles.error}`} role="alert">
+              {actionError}
             </div>
-          </div>
-          {(historyQuery.data?.content ?? []).map((h) => {
-            const st = STATUS_STYLE[h.status] ?? STATUS_STYLE.COMPLETED;
-            const minutes = h.actualFocusSeconds != null ? Math.round(h.actualFocusSeconds / 60) : h.plannedFocusMinutes;
-            return (
-              <div key={h.id} className={styles.historyRow}>
-                <span className={styles.historyWhen}>{new Date(h.startedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
-                <span className={styles.historyTitle}>{h.taskId ? `Tarefa #${h.taskId}` : h.projectId ? `Projeto #${h.projectId}` : "Sessão livre"}</span>
-                <span className={styles.historyMinutes}>{minutes}min</span>
-                <span className={styles.historyStatus} style={{ borderColor: st[0], color: st[1] }}>{FOCUS_SESSION_STATUS_LABEL[h.status]}</span>
-              </div>
-            );
-          })}
-          {historyQuery.data?.empty && <div className="fn-empty">SEM SESSÕES REGISTRADAS</div>}
-          {historyQuery.data && historyQuery.data.totalPages > 1 && (
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 20px" }}>
-              <button className="fn-btn-ghost" style={{ padding: "6px 12px", fontSize: 10 }} disabled={historyQuery.data.first} onClick={() => setHistoryPage((p) => p - 1)}>
-                ANTERIOR
+          )}
+
+          <div className={styles.actions}>
+            {!active && (
+              <button
+                type="button"
+                className="fn-btn-primary"
+                disabled={startMutation.isPending}
+                onClick={() => {
+                  primeTimerAlarm();
+                  void requestTimerNotificationPermission();
+                  startMutation.mutate();
+                }}
+              >
+                {startMutation.isPending ? "Iniciando..." : "Iniciar sessão"}
               </button>
-              <button className="fn-btn-ghost" style={{ padding: "6px 12px", fontSize: 10 }} disabled={historyQuery.data.last} onClick={() => setHistoryPage((p) => p + 1)}>
-                PRÓXIMA
+            )}
+            {paused && (
+              <button
+                type="button"
+                className="fn-btn-primary"
+                disabled={actionsDisabled}
+                onClick={() => {
+                  primeTimerAlarm();
+                  void requestTimerNotificationPermission();
+                  resumeMutation.mutate();
+                }}
+              >
+                Retomar
+              </button>
+            )}
+            {running && (
+              <button
+                type="button"
+                className="fn-btn-primary"
+                disabled={actionsDisabled}
+                onClick={() => pauseMutation.mutate()}
+              >
+                Pausar
+              </button>
+            )}
+            {active && (
+              <button
+                type="button"
+                className="fn-btn-text"
+                disabled={actionsDisabled}
+                onClick={() => finishMutation.mutate()}
+              >
+                Finalizar
+              </button>
+            )}
+            {active && (
+              <button
+                type="button"
+                className={`fn-btn-text ${styles.cancel}`}
+                disabled={actionsDisabled}
+                onClick={() => cancelMutation.mutate()}
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className={`fn-split ${styles.history}`} aria-labelledby="focus-history-title">
+        <div>
+          <div className="fn-eyebrow">
+            <span className="fn-eyebrow-bar" aria-hidden="true" />
+            <span className="fn-eyebrow-text">{history ? `${history.totalElements} sessões` : "…"}</span>
+          </div>
+          <h2 id="focus-history-title" className="fn-h2">
+            Histórico
+          </h2>
+        </div>
+        <div className={styles.historyList}>
+          {historyQuery.isError && (
+            <div className="fn-error-banner" role="alert">
+              {describeApiError(historyQuery.error)}
+            </div>
+          )}
+          <ol className={styles.rows}>
+            {(history?.content ?? []).map((h) => {
+              const minutes = h.actualFocusSeconds != null ? Math.round(h.actualFocusSeconds / 60) : h.plannedFocusMinutes;
+              return (
+                <li key={h.id} className={styles.row}>
+                  <span className={styles.when}>
+                    {new Date(h.startedAt).toLocaleString("pt-BR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <span className={styles.title}>
+                    {h.taskId ? `Tarefa #${h.taskId}` : h.projectId ? `Projeto #${h.projectId}` : "Sessão livre"}
+                  </span>
+                  <span className={styles.minutes}>{minutes} min</span>
+                  <span className={styles.statusTag} data-status={h.status}>
+                    {FOCUS_SESSION_STATUS_LABEL[h.status]}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          {history?.empty && <p className="fn-empty">Sem sessões registradas.</p>}
+          {history && history.totalPages > 1 && (
+            <div className="fn-pager">
+              <button
+                type="button"
+                className="fn-btn-ghost"
+                disabled={history.first}
+                onClick={() => setHistoryPage((p) => p - 1)}
+              >
+                Anterior
+              </button>
+              <span className="fn-mono-label">
+                Página {historyPage + 1} de {history.totalPages}
+              </span>
+              <button
+                type="button"
+                className="fn-btn-ghost"
+                disabled={history.last}
+                onClick={() => setHistoryPage((p) => p + 1)}
+              >
+                Próxima
               </button>
             </div>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

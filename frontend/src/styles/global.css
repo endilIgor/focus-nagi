@@ -2,7 +2,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: #06060a;
+  background: #05060f;
 }
 
 *,
@@ -12,20 +12,21 @@ body {
 }
 
 body {
-  color: #f2f0f7;
-  font-family: "Chakra Petch", sans-serif;
+  color: #fff;
+  font-family: "Geist", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
-  color: #c4b5fd;
+  color: #ffb829;
   text-decoration: none;
 }
 a:hover {
-  color: #e9e2ff;
+  color: #fff;
 }
 
 ::selection {
-  background: rgba(124, 58, 237, 0.55);
+  background: #8052ff;
   color: #fff;
 }
 
@@ -40,51 +41,47 @@ button {
   font: inherit;
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: #5b6475;
+}
+
 /* ---- design tokens shared by every screen ---- */
 :root {
-  --bg: #06060a;
-  --text: #f2f0f7;
-  --text-dim: #b9b4c9;
-  --text-mute: #a5a0b8;
-  --text-faint: #8b86a0;
-  --text-bright: #f7f5fc;
+  --font-sans: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --violet: #8052ff;
+  --violet-hover: #9270ff;
+  --violet-soft: #a48bff;
+  --amber: #ffb829;
+  --gradient-headline: linear-gradient(180deg, #ffffff 10%, #d8ecf8 50%, #98c0ef 100%);
+  --bg: #05060f;
+  --text: #ffffff;
+  --text-ice: #d8ecf8;
+  --text-dim: #c7d3ea;
+  --text-mute: #9da7ba;
+  --text-faint: #8a94a8;
+  --text-off: #5b6475;
+  --text-bright: #ffffff;
   --rose: #f43f5e;
   --rose-text: #ff8098;
   --amber-border: rgba(245, 200, 107, 0.4);
   --amber-text: #f7ce7e;
-  --hairline: rgba(255, 255, 255, 0.07);
-  --hairline-strong: rgba(255, 255, 255, 0.18);
+  --hairline: rgba(186, 215, 247, 0.1);
+  --hairline-strong: rgba(186, 215, 247, 0.24);
+  --track: #151a26;
+  --glass-bg: rgba(186, 214, 247, 0.03);
+  --glass-shadow: inset 0 1px 1px rgba(199, 211, 234, 0.12), inset 0 24px 48px rgba(199, 211, 234, 0.05),
+    0 24px 32px rgba(6, 6, 14, 0.7);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .fn-root {
   min-height: 100vh;
-  background: radial-gradient(1200px 700px at 78% -12%, var(--glow), transparent 62%),
-    radial-gradient(820px 560px at 2% 104%, var(--soft), transparent 64%), #06060a;
+  background: var(--bg);
   color: var(--text);
   position: relative;
   overflow-x: hidden;
-}
-
-.fn-grid-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.55;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
-  background-size: 72px 72px;
-}
-
-.fn-hatch-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.5;
-  background-image: repeating-linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.022) 0 1px,
-    transparent 1px 5px
-  );
 }
 
 @keyframes fnPulse {
@@ -99,7 +96,41 @@ button {
 @keyframes fnRise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fnFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fnGrow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes fnGrowX {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes fnPop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
   }
   to {
     opacity: 1;
@@ -161,231 +192,327 @@ button {
 
 /* ---- reusable primitives ---- */
 
-.fn-panel {
-  position: relative;
-  border: 1px solid var(--hairline);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+/* Two-column hero: copy on one side, a particle anchor on the other; stacks when narrow. */
+.fn-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+  gap: 36px;
+  align-items: center;
 }
-.fn-panel:hover {
-  transform: translateY(-2px);
-  border-color: rgba(103, 232, 249, 0.2);
-  background: linear-gradient(180deg, rgba(59, 130, 246, 0.075), rgba(255, 255, 255, 0.01));
+.fn-hero-copy {
+  min-width: 0;
+  animation: fnRise 0.8s var(--ease-out) both;
 }
-
-.fn-corner-tl {
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 16px;
-  height: 16px;
-  border-top: 2px solid var(--acc);
-  border-left: 2px solid var(--acc);
-  pointer-events: none;
-}
-.fn-corner-br {
-  position: absolute;
-  bottom: -1px;
-  right: -1px;
-  width: 16px;
-  height: 16px;
-  border-bottom: 2px solid var(--acc2);
-  border-right: 2px solid var(--acc2);
+/* Smaller robot slot used by secondary screens. */
+.fn-hero-anchor {
+  width: 100%;
+  max-width: 340px;
+  aspect-ratio: 1;
+  justify-self: end;
   pointer-events: none;
 }
 
-.fn-btn-primary {
-  background: var(--acc);
-  border: none;
-  color: #07070c;
-  padding: 15px 24px;
-  font: 700 12px "Chakra Petch", sans-serif;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
-  clip-path: polygon(0 0, 100% 0, 100% 66%, calc(100% - 13px) 100%, 0 100%);
-  box-shadow: 0 18px 40px -20px var(--glow);
-  transition: filter 0.15s ease, transform 0.15s ease;
-}
-.fn-btn-primary:hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
-}
-.fn-btn-primary:active {
-  transform: translateY(1px);
-}
-.fn-btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: none;
-}
-
-.fn-btn-ghost {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #d8d4e6;
-  padding: 12px 22px;
-  font: 600 11px "Chakra Petch", sans-serif;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
-}
-.fn-btn-ghost:hover {
-  border-color: rgba(255, 255, 255, 0.28);
-  color: var(--text-bright);
-  transform: translateY(-1px);
-}
-.fn-btn-ghost:active {
-  transform: translateY(1px);
-}
-.fn-btn-ghost:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.fn-btn-danger {
-  background: transparent;
-  border: 1px solid rgba(244, 63, 94, 0.4);
-  color: #ff8098;
-  padding: 12px 22px;
-  font: 700 11px "Chakra Petch", sans-serif;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: filter 0.15s ease, transform 0.15s ease;
-}
-.fn-btn-danger:hover {
-  filter: brightness(1.15);
-  transform: translateY(-1px);
-}
-.fn-btn-danger:active {
-  transform: translateY(1px);
-}
-
-.fn-mono-label {
-  font: 500 10px "JetBrains Mono", monospace;
-  letter-spacing: 0.24em;
-  color: var(--text-mute);
+/* Section split: title block on one side, content on the other. */
+.fn-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 36px 60px;
 }
 
 .fn-eyebrow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 9px;
+  gap: 12px;
+  font: 400 13px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
 .fn-eyebrow-bar {
-  width: 22px;
-  height: 2px;
-  background: var(--acc);
+  flex: none;
+  width: 36px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(186, 215, 247, 0.4));
 }
 .fn-eyebrow-text {
-  font: 500 10px "JetBrains Mono", monospace;
-  letter-spacing: 0.3em;
-  color: var(--acc2);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .fn-h1 {
-  margin: 0;
-  font: 600 38px "Chakra Petch", sans-serif;
-  letter-spacing: -0.015em;
+  margin: 18px 0 0;
+  padding-bottom: 0.06em;
+  font: 400 clamp(56px, 9vw, 113px) / 1 var(--font-sans);
+  letter-spacing: -0.04em;
+  background: var(--gradient-headline);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  overflow-wrap: anywhere;
+}
+.fn-h2 {
+  margin: 18px 0 0;
+  font: 400 clamp(36px, 5vw, 48px) / 1.1 var(--font-sans);
+  letter-spacing: -0.04em;
+  color: #fff;
+}
+.fn-lead {
+  margin: 24px 0 0;
+  max-width: 480px;
+  font: 200 18px/1.5 var(--font-sans);
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+
+/* Small uppercase label used above values and fields. */
+.fn-label {
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.fn-mono-label {
+  font: 400 12px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+/* Frosted glass card. */
+.fn-glass,
+.fn-panel {
+  position: relative;
+  border-radius: 16px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--glass-shadow);
+}
+.fn-panel {
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.fn-panel:hover {
+  transform: translateY(-2px);
+  background: rgba(186, 214, 247, 0.05);
+}
+
+/* Legacy corner brackets: retired pages only; the v3 surfaces are rounded. */
+.fn-corner-tl,
+.fn-corner-br {
+  display: none;
+}
+
+.fn-btn-primary {
+  border: 0;
+  border-radius: 24px;
+  padding: 15px 24px;
+  background: var(--violet);
+  color: #fff;
+  font: 600 14px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 12px 32px -12px rgba(128, 82, 255, 0.8);
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.3s ease;
+}
+.fn-btn-primary:hover:not(:disabled) {
+  background: var(--violet-hover);
+  transform: translateY(-1px);
+}
+.fn-btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.fn-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fn-btn-ghost {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 20px;
+  background: rgba(186, 214, 247, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(186, 215, 247, 0.12);
+  color: #fff;
+  font: 500 14px var(--font-sans);
+  cursor: pointer;
+  transition: background 0.2s ease, opacity 0.3s ease;
+}
+.fn-btn-ghost:hover:not(:disabled) {
+  background: rgba(186, 214, 247, 0.12);
+}
+.fn-btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Text-only action (Finalizar / Cancelar / Excluir). */
+.fn-btn-text {
+  min-height: 44px;
+  border: 0;
+  padding: 0 2px;
+  background: transparent;
+  color: #fff;
+  font: 600 14px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.3s ease;
+}
+.fn-btn-text:hover:not(:disabled) {
+  color: var(--amber);
+}
+.fn-btn-text:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fn-btn-danger {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 20px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 128, 152, 0.4);
+  color: var(--rose-text);
+  font: 600 13px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.fn-btn-danger:hover:not(:disabled) {
+  background: rgba(255, 128, 152, 0.08);
 }
 
 .fn-field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 .fn-field > span:first-child {
-  font: 400 10px "JetBrains Mono", monospace;
-  letter-spacing: 0.24em;
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
   color: var(--text-mute);
 }
 .fn-input,
 .fn-textarea,
 .fn-select {
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-left: 2px solid var(--acc);
-  color: var(--text);
-  padding: 13px 14px;
-  font: 400 15px "JetBrains Mono", monospace;
-  outline: none;
   width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(199, 211, 234, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(186, 215, 247, 0.12);
+  color: var(--text);
+  font: 400 15px var(--font-sans);
+  outline: none;
+  color-scheme: dark;
+  transition: box-shadow 0.25s ease, background 0.25s ease;
 }
 .fn-textarea {
-  font: 400 14px "Barlow", sans-serif;
+  line-height: 1.5;
   resize: vertical;
 }
 .fn-input:focus,
 .fn-textarea:focus,
 .fn-select:focus {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(199, 211, 234, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(186, 215, 247, 0.3), 0 0 0 4px rgba(128, 82, 255, 0.18);
+}
+
+/* Borderless underline field from the reference (missions, session notes). */
+.fn-underline {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid rgba(186, 215, 247, 0.16);
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  padding: 10px 0 14px;
+  font: 200 22px var(--font-sans);
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+.fn-underline:focus {
+  border-bottom-color: var(--violet);
 }
 
 .fn-empty {
-  padding: 44px 20px;
-  text-align: center;
-  font: 500 12px "JetBrains Mono", monospace;
+  padding: 24px 0;
+  font: 200 18px var(--font-sans);
   color: var(--text-mute);
-  letter-spacing: 0.16em;
 }
 
+/* Pill toggle (period, presets, filters). */
 .fn-chip {
-  padding: 9px 15px;
-  font: 500 10px "JetBrains Mono", monospace;
-  letter-spacing: 0.18em;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 40px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 9999px;
   background: transparent;
   color: var(--text-mute);
-  transition: border-color 0.15s ease;
+  font: 600 13px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.35s var(--ease-out);
 }
-.fn-chip:hover {
-  border-color: rgba(255, 255, 255, 0.28);
+.fn-chip:hover:not(:disabled) {
+  color: #fff;
 }
-.fn-chip.is-active {
-  background: var(--glow);
-  border-color: var(--acc);
-  color: var(--text-bright);
+.fn-chip.is-active,
+.fn-chip[aria-pressed="true"] {
+  background: rgba(186, 214, 247, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(186, 215, 247, 0.24);
+  color: #fff;
+}
+.fn-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .fn-error-banner {
-  border: 1px solid rgba(244, 63, 94, 0.4);
-  background: rgba(244, 63, 94, 0.1);
-  color: #ff8098;
-  padding: 12px 16px;
-  font: 500 12px "JetBrains Mono", monospace;
-  letter-spacing: 0.04em;
   margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 128, 152, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 128, 152, 0.3);
+  color: #ff9aae;
+  font: 400 14px var(--font-sans);
 }
 
 .fn-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.15);
-  border-top-color: var(--acc2);
+  border-top-color: var(--amber);
   border-radius: 50%;
   animation: fnSpin 0.7s linear infinite;
   display: inline-block;
 }
 
 .fn-progress-ring {
-  animation: fnRingDraw 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transition: stroke-dashoffset 0.65s cubic-bezier(0.22, 1, 0.36, 1), stroke 0.2s ease;
+  animation: fnRingDraw 0.8s var(--ease-out) both;
+  transition: stroke-dashoffset 0.65s var(--ease-out), stroke 0.2s ease;
+}
+
+/* Previous / next pager under paginated lists. */
+.fn-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 /* ---- keyboard focus ---- */
 :focus-visible {
-  outline: 2px solid var(--acc2);
+  outline: 2px solid var(--amber);
   outline-offset: 2px;
-}
-/* clip-path clips regular outlines, so clipped controls signal focus with a glow instead. */
-.fn-btn-primary:focus-visible {
-  outline: none;
-  filter: brightness(1.12) drop-shadow(0 0 12px var(--acc));
 }
 
 /* 16px+ inputs on mobile prevent Safari/iOS from zooming in on focus. */
@@ -394,6 +521,10 @@ button {
   .fn-textarea,
   .fn-select {
     font-size: 16px;
+  }
+  .fn-hero-anchor {
+    justify-self: center;
+    max-width: 260px;
   }
 }
 

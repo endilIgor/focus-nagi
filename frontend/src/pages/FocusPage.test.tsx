@@ -1,10 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemeProvider } from "../theme/ThemeContext";
 import type { FocusSessionResponse } from "../api/types";
-import { CURRENT_FOCUS_SESSION_KEY } from "../hooks/useFocusSession";
+import { CURRENT_FOCUS_SESSION_KEY, LAST_COMPLETED_FOCUS_SESSION_KEY } from "../hooks/useFocusSession";
 
 let mockNow = Date.parse("2026-09-21T12:00:00Z");
 vi.mock("../hooks/useClock", () => ({
@@ -27,6 +27,8 @@ vi.mock("../api/projects", () => ({ projectsApi: { list: vi.fn(), get: vi.fn() }
 vi.mock("../api/pagination", () => ({ fetchAllContent: vi.fn(async () => []) }));
 
 import { focusSessionsApi } from "../api/focusSessions";
+import { projectsApi } from "../api/projects";
+import { tasksApi } from "../api/tasks";
 import { FocusPage } from "./FocusPage";
 
 const mockedApi = vi.mocked(focusSessionsApi);
@@ -106,7 +108,7 @@ describe("FocusPage session actions", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "Iniciar sessão" })).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Finalizar" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pausar" })).not.toBeInTheDocument();
-    expect(screen.getByText("PRONTA")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Pronta." })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(audioContext).not.toHaveBeenCalled();
     expect(mockedApi.current).toHaveBeenCalledTimes(1);
@@ -141,7 +143,7 @@ describe("FocusPage session actions", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Retomar" })).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Pausar" })).not.toBeInTheDocument();
-    expect(screen.getByText("PAUSADA")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Pausada." })).toBeInTheDocument();
     expect(mockedApi.current).toHaveBeenCalledTimes(1);
   });
 
@@ -161,7 +163,7 @@ describe("FocusPage session actions", () => {
 
     await waitFor(() => expect(screen.getByRole("button", { name: "Pausar" })).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Retomar" })).not.toBeInTheDocument();
-    expect(screen.getByText("EM EXECUÇÃO")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Em execução." })).toBeInTheDocument();
     expect(mockedApi.current).toHaveBeenCalledTimes(1);
   });
 
@@ -176,6 +178,7 @@ describe("FocusPage session actions", () => {
     renderPage();
     await screen.findByRole("button", { name: "Iniciar sessão" });
 
+    await userEvent.click(screen.getByRole("button", { name: /duração da sessão/i }));
     await userEvent.click(screen.getByRole("button", { name: "60 MIN" }));
     await userEvent.click(screen.getByRole("button", { name: "Iniciar sessão" }));
 
@@ -269,6 +272,276 @@ describe("FocusPage current-session polling race", () => {
     expect(screen.getByRole("button", { name: "Iniciar sessão" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Finalizar" })).not.toBeInTheDocument();
     expect(mockedApi.current).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("FocusPage idle base (last COMPLETED session)", () => {
+  const oldCompleted = session({ id: 0, status: "COMPLETED", startedAt: "2026-09-21T08:00:00Z", endedAt: "2026-09-21T08:25:00Z" });
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.unstubAllGlobals();
+    mockNow = Date.parse("2026-09-21T12:00:00Z");
+    mockedApi.list.mockResolvedValue(EMPTY_PAGE);
+  });
+
+  it("manual finish writes the finish response as idle base immediately, cancelling an in-flight read", async () => {
+    const finished = session({ status: "COMPLETED", endedAt: "2026-09-21T12:25:00Z", actualFocusSeconds: 1500 });
+    mockedApi.current.mockResolvedValue(session());
+    mockedApi.finish.mockResolvedValue(finished);
+
+    const { queryClient } = renderPage();
+    await screen.findByRole("button", { name: "Finalizar" });
+
+    let resolveRead!: (value: FocusSessionResponse | null) => void;
+    let inFlight!: Promise<void>;
+    act(() => {
+      inFlight = queryClient.prefetchQuery({
+        queryKey: LAST_COMPLETED_FOCUS_SESSION_KEY,
+        queryFn: () => new Promise<FocusSessionResponse | null>((resolve) => (resolveRead = resolve)),
+      });
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Finalizar" }));
+    await waitFor(() => expect(queryClient.getQueryData(LAST_COMPLETED_FOCUS_SESSION_KEY)).toEqual(finished));
+
+    await act(async () => {
+      resolveRead(oldCompleted);
+      await inFlight;
+    });
+    expect(queryClient.getQueryData(LAST_COMPLETED_FOCUS_SESSION_KEY)).toEqual(finished);
+  });
+
+  it("cancel never moves the idle base", async () => {
+    mockedApi.current.mockResolvedValue(session());
+    mockedApi.cancel.mockResolvedValue(
+      session({ status: "CANCELLED", endedAt: "2026-09-21T12:10:00Z", actualFocusSeconds: 600 }),
+    );
+
+    const { queryClient } = renderPage();
+    queryClient.setQueryData(LAST_COMPLETED_FOCUS_SESSION_KEY, oldCompleted);
+    await screen.findByRole("button", { name: "Cancelar" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Iniciar sessão" })).toBeInTheDocument());
+
+    expect(queryClient.getQueryData(LAST_COMPLETED_FOCUS_SESSION_KEY)).toEqual(oldCompleted);
+    expect(queryClient.getQueryState(LAST_COMPLETED_FOCUS_SESSION_KEY)?.isInvalidated).toBe(false);
+    expect(mockedApi.list).not.toHaveBeenCalledWith(expect.objectContaining({ status: "COMPLETED" }));
+  });
+});
+
+describe("FocusPage duration menu", () => {
+  const durationTrigger = () => screen.getByRole("button", { name: /duração da sessão/i });
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.unstubAllGlobals();
+    mockNow = Date.parse("2026-09-21T12:00:00Z");
+    mockedApi.list.mockResolvedValue(EMPTY_PAGE);
+  });
+
+  it("replaces the always-visible presets with a compact menu defaulting to 50 minutes", async () => {
+    mockedApi.current.mockResolvedValue(undefined);
+    mockedApi.start.mockResolvedValue(session({ plannedFocusMinutes: 50 }));
+
+    renderPage();
+    await screen.findByRole("button", { name: "Iniciar sessão" });
+    expect(durationTrigger()).toHaveAccessibleName("Duração da sessão: 50 MIN");
+    expect(screen.queryByRole("button", { name: "25 MIN" })).not.toBeInTheDocument();
+    expect(screen.getByText("50:00")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Iniciar sessão" }));
+    await waitFor(() =>
+      expect(mockedApi.start).toHaveBeenCalledWith(expect.objectContaining({ plannedFocusMinutes: 50 })),
+    );
+  });
+
+  it("a custom duration updates the timer and the start payload", async () => {
+    mockedApi.current.mockResolvedValue(undefined);
+    mockedApi.start.mockResolvedValue(session({ plannedFocusMinutes: 75 }));
+
+    renderPage();
+    await screen.findByRole("button", { name: "Iniciar sessão" });
+    await userEvent.click(durationTrigger());
+    await userEvent.type(screen.getByLabelText("Minutos personalizados"), "75");
+    await userEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+
+    expect(durationTrigger()).toHaveAccessibleName("Duração da sessão: 75 MIN");
+    expect(screen.getByText("75:00")).toBeInTheDocument();
+    expect(screen.getByText("Planejado 75 min · pausas 0 min")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Iniciar sessão" }));
+    await waitFor(() => expect(mockedApi.start).toHaveBeenCalledTimes(1));
+    expect(mockedApi.start).toHaveBeenCalledWith(expect.objectContaining({ plannedFocusMinutes: 75 }));
+  });
+
+  it("an invalid custom duration never reaches the start payload", async () => {
+    mockedApi.current.mockResolvedValue(undefined);
+    mockedApi.start.mockResolvedValue(session({ plannedFocusMinutes: 50 }));
+
+    renderPage();
+    await screen.findByRole("button", { name: "Iniciar sessão" });
+    await userEvent.click(durationTrigger());
+    await userEvent.type(screen.getByLabelText("Minutos personalizados"), "1441");
+    await userEvent.click(screen.getByRole("button", { name: "Aplicar" }));
+    expect(screen.getByText("Informe um número inteiro de 1 a 1440 minutos.")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+
+    await userEvent.click(screen.getByRole("button", { name: "Iniciar sessão" }));
+    await waitFor(() => expect(mockedApi.start).toHaveBeenCalledTimes(1));
+    expect(mockedApi.start).toHaveBeenCalledWith(expect.objectContaining({ plannedFocusMinutes: 50 }));
+  });
+
+  it("blocks duration changes while the start request is pending", async () => {
+    let resolveStart!: (value: FocusSessionResponse) => void;
+    mockedApi.current.mockResolvedValue(undefined);
+    mockedApi.start.mockImplementation(
+      () => new Promise<FocusSessionResponse>((resolve) => (resolveStart = resolve)),
+    );
+
+    renderPage();
+    await screen.findByRole("button", { name: "Iniciar sessão" });
+    await userEvent.click(screen.getByRole("button", { name: "Iniciar sessão" }));
+    await screen.findByRole("button", { name: "Iniciando..." });
+
+    expect(durationTrigger()).toBeDisabled();
+    await userEvent.click(durationTrigger());
+    expect(screen.queryByRole("dialog", { name: "Duração da sessão" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "25 MIN" })).not.toBeInTheDocument();
+
+    await act(async () => resolveStart(session({ plannedFocusMinutes: 50 })));
+    await screen.findByRole("button", { name: "Finalizar" });
+    expect(mockedApi.start).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["RUNNING", "PAUSED"] as const)("blocks duration changes during a %s session", async (status) => {
+    mockedApi.current.mockResolvedValue(
+      session({ status, lastPausedAt: status === "PAUSED" ? "2026-09-21T12:00:00Z" : null }),
+    );
+
+    renderPage();
+    await screen.findByRole("button", { name: "Finalizar" });
+    expect(durationTrigger()).toBeDisabled();
+    expect(durationTrigger()).toHaveAccessibleName("Duração da sessão: 25 MIN");
+    await userEvent.click(durationTrigger());
+    expect(screen.queryByRole("dialog", { name: "Duração da sessão" })).not.toBeInTheDocument();
+  });
+
+  it("closes an open menu when a session becomes active", async () => {
+    mockedApi.current.mockResolvedValue(undefined);
+    const { queryClient } = renderPage();
+    await screen.findByRole("button", { name: "Iniciar sessão" });
+    await userEvent.click(durationTrigger());
+    expect(screen.getByRole("dialog", { name: "Duração da sessão" })).toBeInTheDocument();
+
+    act(() => {
+      queryClient.setQueryData(CURRENT_FOCUS_SESSION_KEY, session({ plannedFocusMinutes: 25 }));
+    });
+
+    await screen.findByRole("button", { name: "Finalizar" });
+    expect(screen.queryByRole("dialog", { name: "Duração da sessão" })).not.toBeInTheDocument();
+    expect(durationTrigger()).toBeDisabled();
+  });
+});
+
+describe("FocusPage v3 composition", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.unstubAllGlobals();
+    mockNow = Date.parse("2026-09-21T12:00:00Z");
+    mockedApi.list.mockResolvedValue(EMPTY_PAGE);
+  });
+
+  it("centres the remaining time inside a single ring particle anchor that carries the real progress", async () => {
+    mockNow = Date.parse("2026-09-21T12:10:00Z");
+    mockedApi.current.mockResolvedValue(session({ plannedFocusMinutes: 25 }));
+
+    const { container } = renderPage();
+    await screen.findByRole("button", { name: "Finalizar" });
+    const anchors = container.querySelectorAll<HTMLElement>("[data-particle-anchor]");
+    expect(anchors).toHaveLength(1);
+    expect(anchors[0]).toHaveAttribute("data-shape", "ring");
+    expect(anchors[0]).toHaveAttribute("data-progress", "0.4");
+    expect(anchors[0]).toHaveAttribute("data-running", "true");
+    expect(within(anchors[0]).getByText("15:00")).toBeInTheDocument();
+    expect(within(anchors[0]).getByText("Restante · 40% concluído")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Em execução." })).toBeInTheDocument();
+    expect(screen.queryByTestId("particle-scene")).not.toBeInTheDocument();
+  });
+
+  it("keeps the ring idle with the selected block when there is no session", async () => {
+    mockedApi.current.mockResolvedValue(undefined);
+
+    const { container } = renderPage();
+    await screen.findByRole("button", { name: "Iniciar sessão" });
+    const anchor = container.querySelector<HTMLElement>("[data-particle-anchor]")!;
+    expect(anchor).toHaveAttribute("data-shape", "ring");
+    expect(anchor).toHaveAttribute("data-progress", "0");
+    expect(anchor).toHaveAttribute("data-running", "false");
+    expect(within(anchor).getByText("50:00")).toBeInTheDocument();
+    expect(within(anchor).getByText("Selecione um bloco e inicie")).toBeInTheDocument();
+    expect(screen.getByText("Câmara de foco")).toBeInTheDocument();
+    expect(screen.getByLabelText("Notas da sessão")).toBeInTheDocument();
+  });
+
+  it("stops the ring motion while the session is paused", async () => {
+    mockNow = Date.parse("2026-09-21T12:10:00Z");
+    mockedApi.current.mockResolvedValue(
+      session({ status: "PAUSED", lastPausedAt: "2026-09-21T12:05:00Z" }),
+    );
+
+    const { container } = renderPage();
+    await screen.findByRole("button", { name: "Retomar" });
+    const anchor = container.querySelector<HTMLElement>("[data-particle-anchor]")!;
+    expect(anchor).toHaveAttribute("data-running", "false");
+    expect(anchor).toHaveAttribute("data-progress", "0.2");
+  });
+
+  it("lists the real history under the Histórico heading with status and pagination", async () => {
+    mockedApi.current.mockResolvedValue(undefined);
+    mockedApi.list.mockResolvedValue({
+      ...EMPTY_PAGE,
+      content: [
+        session({ id: 11, status: "COMPLETED", endedAt: "2026-09-21T12:25:00Z", actualFocusSeconds: 1500 }),
+        session({ id: 12, taskId: 42, status: "CANCELLED", endedAt: "2026-09-21T11:10:00Z", actualFocusSeconds: 600 }),
+      ],
+      totalElements: 9,
+      totalPages: 2,
+      numberOfElements: 2,
+      first: true,
+      last: false,
+      empty: false,
+    });
+
+    renderPage();
+    const history = await screen.findByRole("region", { name: "Histórico" });
+    expect(within(history).getByRole("heading", { level: 2, name: "Histórico" })).toBeInTheDocument();
+    expect(await within(history).findByText("9 sessões")).toBeInTheDocument();
+    const rows = within(history).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]).getByText("Sessão livre")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("25 min")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("Concluída")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Tarefa #42")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("10 min")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Cancelada")).toBeInTheDocument();
+
+    await userEvent.click(within(history).getByRole("button", { name: "Próxima" }));
+    await waitFor(() => expect(mockedApi.list).toHaveBeenCalledWith({ page: 1, size: 8 }));
+  });
+
+  it("shows the linked task, project and notes of the active session", async () => {
+    vi.mocked(tasksApi.get).mockResolvedValue({ id: 3, title: "Revisar worker" } as never);
+    vi.mocked(projectsApi.get).mockResolvedValue({ id: 4, title: "Projeto Vega" } as never);
+    mockedApi.current.mockResolvedValue(session({ taskId: 3, projectId: 4, notes: "Fechar o PR" }));
+
+    renderPage();
+    await screen.findByRole("button", { name: "Finalizar" });
+    expect(await screen.findByText("Revisar worker")).toBeInTheDocument();
+    expect(await screen.findByText("Projeto Vega")).toBeInTheDocument();
+    expect(screen.getByText("Fechar o PR")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Notas da sessão")).not.toBeInTheDocument();
   });
 });
 

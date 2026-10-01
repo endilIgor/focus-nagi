@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { analyticsApi } from "../api/analytics";
@@ -151,5 +151,44 @@ it("shows this week's provisional grade on the weekend using data through today"
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
   await waitFor(() => expect(analyticsApi.checklistDaily).toHaveBeenCalledWith("2026-09-21", "2026-09-26"));
   expect(await screen.findByText(/avaliação parcial/i)).toBeInTheDocument();
-  expect(screen.getByText("EXCELENTE")).toBeInTheDocument();
+  expect(screen.getByText("Excelente.")).toBeInTheDocument();
+});
+
+it("lays out the v3 telemetry hero, glass summary and real charts without replacing the period data", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(new Date("2026-09-29T12:00:00"));
+  vi.mocked(analyticsApi.byDay).mockResolvedValue([
+    { date: "2026-09-28", focusedMinutes: 600 },
+    { date: "2026-09-29", focusedMinutes: 0 },
+  ]);
+  vi.mocked(analyticsApi.byHour).mockResolvedValue([{ hour: 9, focusedMinutes: 600 }]);
+  const { container } = render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><AnalyticsPage /></QueryClientProvider>);
+
+  expect(screen.getByRole("heading", { level: 1, name: "Analytics." })).toBeInTheDocument();
+  expect(screen.getByText("Telemetria")).toBeInTheDocument();
+  const anchors = container.querySelectorAll("[data-particle-anchor]");
+  expect(anchors).toHaveLength(1);
+  expect(anchors[0]).toHaveAttribute("data-shape", "cloud");
+  expect(screen.queryByTestId("particle-scene")).toBeNull();
+  expect(screen.getByRole("button", { name: "Semana" })).toHaveAttribute("aria-pressed", "true");
+
+  const summary = screen.getByRole("region", { name: "Resumo do período" });
+  const cards = within(summary).getAllByRole("article");
+  expect(cards).toHaveLength(4);
+  expect(await within(cards[0]).findByText("10h00")).toBeInTheDocument();
+  expect(await within(cards[1]).findByText("3/4")).toBeInTheDocument();
+  expect(await within(cards[2]).findByText("1d")).toBeInTheDocument();
+  expect(await within(cards[3]).findByText("09h")).toBeInTheDocument();
+
+  const heat = screen.getByRole("region", { name: "Mapa de foco" });
+  expect(within(heat).getByRole("heading", { level: 2, name: "Mapa de foco" })).toBeInTheDocument();
+  expect(await within(heat).findByTitle("2026-09-28 · 600 min")).toBeInTheDocument();
+  expect(within(heat).getByTitle("2026-09-29 · 0 min")).toBeInTheDocument();
+
+  const byDay = screen.getByRole("region", { name: "Foco por dia" });
+  expect(within(byDay).getByRole("heading", { level: 2, name: "Foco por dia" })).toBeInTheDocument();
+  expect(within(byDay).getByText("600")).toBeInTheDocument();
+  const byHour = screen.getByRole("region", { name: "Por hora do dia" });
+  expect(within(byHour).getAllByTitle(/^\d{2}h · \d+ min$/)).toHaveLength(24);
+  expect(within(byHour).getByTitle("09h · 600 min")).toBeInTheDocument();
 });

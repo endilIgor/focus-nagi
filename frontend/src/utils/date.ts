@@ -16,6 +16,17 @@ export function addDaysIso(iso: string, days: number): string {
   return toIso(date);
 }
 
+/** Day of week of a date-only value (0 = Sunday), read from local calendar components. */
+export function weekdayIndex(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).getDay();
+}
+
+/** Monday that opens the Monday–Sunday week containing a date-only value. */
+export function weekStartMondayIso(iso: string): string {
+  return addDaysIso(iso, -((weekdayIndex(iso) + 6) % 7));
+}
+
 export function formatDateLong(iso: string, locale = "pt-BR"): string {
   const [y, m, d] = iso.split("-").map(Number);
   const date = new Date(y, m - 1, d);

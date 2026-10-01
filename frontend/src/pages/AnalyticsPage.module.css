@@ -1,128 +1,191 @@
-.headRow {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+.page {
+  min-width: 0;
 }
+
 .periods {
   display: flex;
   gap: 6px;
+  margin-top: 36px;
+  flex-wrap: wrap;
 }
+
 .rangeRow {
+  margin-top: 30px;
+  color: var(--text-mute);
+}
+.pickerRow {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
-  color: var(--text-mute);
-  font: 500 11px "JetBrains Mono", monospace;
 }
-.rangeRow label { display: flex; align-items: center; gap: 10px; }
-.rangeRow input { color: var(--text-primary); color-scheme: dark; background: transparent; border: 1px solid var(--hairline); padding: 7px; font: inherit; }
-.weekPicker { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.weekPicker button:disabled { opacity: 0.35; cursor: not-allowed; }
-.weekRangeLabel { color: var(--text-primary); font: 600 12px "Chakra Petch", sans-serif; letter-spacing: 0.04em; }
-.weekJump { display: flex; align-items: center; gap: 10px; }
-.calendarControl { position: relative; display: inline-flex; align-items: center; }
-.calendarInput { position: absolute; right: 0; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; clip-path: inset(50%); pointer-events: none; }
-.rating { display: block; margin-top: 12px; color: var(--acc); font: 700 24px "Chakra Petch", sans-serif; }
-.panel p, .panel small { color: var(--text-mute); }
+.rangeLabel {
+  font: 400 16px var(--font-sans);
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+.jumpField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.jumpField input {
+  color: var(--text);
+  color-scheme: dark;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(186, 215, 247, 0.16);
+  padding: 8px 2px;
+  font: 400 14px var(--font-mono);
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+.jumpField input:focus {
+  border-bottom-color: var(--violet);
+}
+.calendarControl {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.calendarInput {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  pointer-events: none;
+}
+
+/* ---- summary ---- */
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 72px;
 }
 .summaryCard {
-  position: relative;
-  border: 1px solid var(--hairline);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.008));
-  padding: 18px;
-  overflow: hidden;
-}
-.summaryTint {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 36px;
-  height: 2px;
+  padding: 26px 24px;
+  min-width: 0;
+  animation: fnRise 0.8s var(--ease-out) both;
 }
 .summaryLabel {
-  font: 500 10px "JetBrains Mono", monospace;
-  letter-spacing: 0.2em;
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
   color: var(--text-mute);
 }
 .summaryValue {
-  font: 700 33px "JetBrains Mono", monospace;
-  margin-top: 9px;
+  margin-top: 12px;
+  font: 400 60px/1 var(--font-sans);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.summaryAccent {
+  color: var(--amber);
 }
 .summaryHint {
-  font: 400 10px "JetBrains Mono", monospace;
-  color: var(--text-faint);
-  margin-top: 5px;
-}
-
-.panel {
-  border: 1px solid var(--hairline);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
-  padding: 20px;
-  margin-bottom: 16px;
-}
-.panel:focus-visible {
-  outline: 2px solid var(--acc);
-  outline-offset: 2px;
-}
-.panelHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.panelTitle {
-  font: 600 12px "Chakra Petch", sans-serif;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-.legend {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font: 500 9px "JetBrains Mono", monospace;
+  margin-top: 12px;
+  font: 200 15px var(--font-sans);
   color: var(--text-mute);
-  letter-spacing: 0.14em;
-}
-.legendSwatch {
-  width: 11px;
-  height: 11px;
 }
 
+/* ---- weekly rating ---- */
+
+.ratingSection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 24px 60px;
+  align-items: end;
+  margin-top: 120px;
+}
+.rating {
+  margin-top: 18px;
+  font: 400 clamp(56px, 8vw, 96px) / 1 var(--font-sans);
+  letter-spacing: -0.04em;
+}
+.ratingWait {
+  margin: 18px 0 0;
+  font: 200 18px/1.5 var(--font-sans);
+  color: var(--text-dim);
+}
+.ratingLine {
+  margin: 0;
+  font: 200 18px/1.5 var(--font-sans);
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+
+/* ---- heatmap ---- */
+
+.heatSection {
+  margin-top: 120px;
+}
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.chartTitleLarge {
+  margin: 0;
+  font: 400 42px/1.2 var(--font-sans);
+  letter-spacing: -0.04em;
+  color: #fff;
+}
 .heatGrid {
   display: grid;
+  grid-template-rows: repeat(7, 1fr);
   grid-auto-flow: column;
-  grid-template-rows: repeat(7, 13px);
-  gap: 4px;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px;
+  margin-top: 30px;
   overflow-x: auto;
 }
 .heatCell {
-  width: 13px;
-  height: 13px;
+  aspect-ratio: 1;
+  max-height: 30px;
+  border-radius: 50%;
+  animation: fnPop 0.6s var(--ease-out) both;
+  transition: transform 0.25s ease;
+}
+.heatCell:hover {
+  transform: scale(1.4);
 }
 
-.twoCol {
+/* ---- charts ---- */
+
+.charts {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 60px;
+  margin-top: 120px;
 }
-
+.chartPanel {
+  padding: 26px 24px;
+  min-width: 0;
+}
+.chartTitle {
+  margin: 0;
+  font: 400 36px/1.2 var(--font-sans);
+  letter-spacing: -0.03em;
+  color: var(--text-ice);
+}
 .dayBars {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  height: 172px;
+  height: 220px;
+  margin-top: 30px;
 }
 .dayBarCol {
   flex: 1;
@@ -130,97 +193,111 @@
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
-  gap: 7px;
+  gap: 10px;
   height: 100%;
+  min-width: 0;
 }
 .dayBarValue {
-  font: 500 9px "JetBrains Mono", monospace;
-  color: var(--text-mute);
+  font: 400 13px var(--font-sans);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
 }
 .dayBar {
   width: 100%;
-  min-height: 2px;
+  max-width: 36px;
+  min-height: 3px;
+  border-radius: 18px;
+  transform-origin: bottom;
+  animation: fnGrow 1s var(--ease-out) both;
 }
 .dayBarLabel {
-  font: 500 9px "JetBrains Mono", monospace;
-  color: var(--text-faint);
+  font: 600 11px var(--font-sans);
+  letter-spacing: 0.025em;
+  color: var(--text-mute);
 }
-
 .hourBars {
   display: flex;
   align-items: flex-end;
-  gap: 2px;
-  height: 172px;
+  gap: 4px;
+  height: 196px;
+  margin-top: 30px;
 }
 .hourBar {
   flex: 1;
-  min-height: 2px;
+  min-height: 3px;
+  border-radius: 6px;
+  transform-origin: bottom;
+  animation: fnGrow 1s var(--ease-out) both;
 }
 .hourAxis {
   display: flex;
   justify-content: space-between;
-  margin-top: 9px;
-  font: 500 9px "JetBrains Mono", monospace;
+  margin-top: 12px;
+  font: 400 12px var(--font-sans);
   color: var(--text-mute);
 }
 
-.bottomTwoCol {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-}
+/* ---- month weeks ---- */
 
-.projectRow {
-  margin-bottom: 14px;
+.weekPanel {
+  margin-top: 120px;
+  padding: 26px 24px;
 }
-.projectRowHead {
-  display: flex;
-  justify-content: space-between;
-  font: 500 13px "Barlow", sans-serif;
-  color: #e4e0ef;
-}
-
 .weekRow {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 11px;
+  margin-top: 14px;
 }
 .weekLabel {
-  width: 60px;
+  width: 88px;
   flex: none;
-  font: 500 10px "JetBrains Mono", monospace;
-  letter-spacing: 0.1em;
-  color: var(--text-faint);
+  font: 400 12px var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--text-mute);
 }
 .weekTrack {
   flex: 1;
-  height: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
 }
 .weekFill {
-  position: absolute;
-  inset: 0 auto 0 0;
+  height: 100%;
+  border-radius: 999px;
+  transform-origin: left;
+  animation: fnGrowX 1s var(--ease-out) both;
 }
 .weekValue {
-  width: 52px;
+  width: 64px;
   flex: none;
   text-align: right;
-  font: 700 11px "JetBrains Mono", monospace;
-  color: #e4e0ef;
+  font: 400 14px var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
 }
 
 @media (max-width: 960px) {
-  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .twoCol, .bottomTwoCol { grid-template-columns: 1fr; }
+  .charts {
+    gap: 40px;
+  }
 }
 
 @media (max-width: 560px) {
-  .summary { grid-template-columns: 1fr; }
-  .periods { width: 100%; overflow-x: auto; }
-  .panel { padding: 16px; }
-  .panelHead { align-items: flex-start; gap: 12px; flex-direction: column; }
-  .dayBars { min-width: 520px; }
-  .twoCol > .panel:first-child { overflow-x: auto; }
+  .summary {
+    margin-top: 48px;
+  }
+  .ratingSection,
+  .heatSection,
+  .charts,
+  .weekPanel {
+    margin-top: 72px;
+  }
+  .dayBars {
+    min-width: 520px;
+  }
+  .chartPanel {
+    overflow-x: auto;
+  }
 }

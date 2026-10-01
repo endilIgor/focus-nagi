@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { analyticsApi } from "../api/analytics";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { focusSessionsApi } from "../api/focusSessions";
 import { useAuth } from "../auth/AuthContext";
-import { useClockTick, formatClock } from "../hooks/useClock";
+import { ParticleScene } from "../components/particles/ParticleScene";
+import { useClockTick } from "../hooks/useClock";
 import {
+  applyFinishedFocusSession,
   computeElapsedSeconds,
+  computeIdleSeconds,
   CURRENT_FOCUS_SESSION_KEY,
   FINISH_FOCUS_SESSION_MUTATION_KEY,
+  formatDuration,
   useCurrentFocusSession,
+  useLastCompletedFocusSession,
 } from "../hooks/useFocusSession";
 import { useTheme } from "../theme/ThemeContext";
-import { addDaysIso, todayIso } from "../utils/date";
 import { describeApiError } from "../utils/errors";
 import { setFocusFaviconState } from "../utils/focusFavicon";
 import { playTimerAlarm } from "../utils/timerAlarm";
@@ -31,6 +34,7 @@ export function AppShell() {
   const { theme } = useTheme();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const queryClient = useQueryClient();
   const now = useClockTick(1000);
   const [logoutError, setLogoutError] = useState<string | null>(null);
@@ -39,21 +43,14 @@ export function AppShell() {
   const autoFinishedSessionId = useRef<number | null>(null);
 
   const currentSessionQuery = useCurrentFocusSession();
-  const streaksQuery = useQuery({
-    queryKey: ["analytics", "streaks"],
-    queryFn: () => analyticsApi.streaks(),
-    staleTime: 60_000,
-  });
-  const sparkQuery = useQuery({
-    queryKey: ["analytics", "by-day", "spark7"],
-    queryFn: () => analyticsApi.byDay(addDaysIso(todayIso(), -6), todayIso()),
-    staleTime: 60_000,
-  });
+  const lastCompletedQuery = useLastCompletedFocusSession();
 
   const session = currentSessionQuery.data;
   const running = session?.status === "RUNNING";
   const paused = session?.status === "PAUSED";
-  const liveLabel = running ? "EM FOCO" : paused ? "PAUSADA" : "OCIOSO";
+  const liveState = running ? "running" : paused ? "paused" : "idle";
+  const liveLabel = running ? "Em foco" : paused ? "Pausada" : "Ocioso";
+  const activeNavIndex = NAV.findIndex(([id]) => pathname === `/${id}` || pathname.startsWith(`/${id}/`));
   const logoFocusState = completionNotice ? "completed" : session ? "focusing" : "idle";
   const elapsedSeconds = session ? computeElapsedSeconds(session, now) : 0;
   const remainingSeconds = session
@@ -68,8 +65,7 @@ export function AppShell() {
       return queryClient.cancelQueries({ queryKey: CURRENT_FOCUS_SESSION_KEY });
     },
     onSuccess: async (data) => {
-      await queryClient.cancelQueries({ queryKey: CURRENT_FOCUS_SESSION_KEY });
-      queryClient.setQueryData(CURRENT_FOCUS_SESSION_KEY, null);
+      await applyFinishedFocusSession(queryClient, data);
       void queryClient.invalidateQueries({ queryKey: ["focus-sessions", "history"] });
       void queryClient.invalidateQueries({ queryKey: ["today"] });
       void queryClient.invalidateQueries({ queryKey: ["analytics"] });
@@ -113,19 +109,9 @@ export function AppShell() {
     }
   }, [session?.id, remainingSeconds]);
 
-  const elapsedDisplay = session
-    ? (() => {
-        const secs = computeElapsedSeconds(session, now);
-        const h = Math.floor(secs / 3600);
-        const m = Math.floor((secs % 3600) / 60);
-        const s = Math.floor(secs % 60);
-        const pad = (n: number) => String(n).padStart(2, "0");
-        return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-      })()
-    : formatClock(new Date(now));
-
-  const spark = sparkQuery.data ?? [];
-  const sparkMax = Math.max(1, ...spark.map((d) => d.focusedMinutes));
+  const elapsedDisplay = formatDuration(
+    session ? elapsedSeconds : computeIdleSeconds(lastCompletedQuery.data, now),
+  );
 
   const handleLogout = async () => {
     try {
@@ -148,91 +134,81 @@ export function AppShell() {
         } as React.CSSProperties
       }
     >
-      <div className="fn-grid-bg" />
-      <div className="fn-hatch-bg" />
-
-      <div style={{ position: "relative" }}>
-        <header className={styles.header}>
-          <div className={styles.headerInner}>
+      <ParticleScene>
+        <div className={styles.frame}>
+          <header className={styles.header}>
             <div className={styles.brand}>
-              <div className={styles.logo} data-focus-state={logoFocusState}>
-                FN
-              </div>
-              <div className={styles.brandTitle}>
-                FOCUS<span>//</span>NAGI
-              </div>
+              <span
+                className={styles.logo}
+                data-testid="brand-logo"
+                data-shape="triangle"
+                data-focus-state={logoFocusState}
+                aria-hidden="true"
+              >
+                <span className={styles.logoFacet} />
+              </span>
+              <span className={styles.brandName}>Focus Nagi</span>
             </div>
 
-            <div className={styles.pill}>
-              <span
-                className={styles.dot}
-                style={{ background: running || paused ? theme.acc2 : "rgba(255,255,255,.3)" }}
-              />
-              <span className={styles.pillLabel}>{liveLabel}</span>
-              <span className={styles.pillValue}>{elapsedDisplay}</span>
-            </div>
+            <nav
+              className={styles.nav}
+              aria-label="Principal"
+              style={{ "--nav-index": Math.max(0, activeNavIndex) } as React.CSSProperties}
+            >
+              {NAV.map(([id, label]) => (
+                <NavLink
+                  key={id}
+                  to={`/${id}`}
+                  className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ""}`}
+                >
+                  {label}
+                </NavLink>
+              ))}
+              {activeNavIndex >= 0 && <span className={styles.navDot} aria-hidden="true" />}
+            </nav>
 
             <div className={styles.spacer} />
 
-            <div className={styles.streak}>
-              <span className={styles.streakLabel}>STREAK</span>
-              <span className={styles.streakValue}>{streaksQuery.data?.currentStreak ?? 0}d</span>
-              <div className={styles.spark}>
-                {spark.map((d, i) => (
-                  <span
-                    key={i}
-                    className={styles.sparkBar}
-                    style={{
-                      height: `${Math.max(8, Math.round((d.focusedMinutes / sparkMax) * 100))}%`,
-                      background:
-                        d.focusedMinutes >= sparkMax * 0.8
-                          ? theme.acc2
-                          : d.focusedMinutes > 0
-                            ? theme.acc
-                            : "rgba(255,255,255,.14)",
-                    }}
-                  />
-                ))}
+            <div className={styles.status}>
+              <div className={styles.live}>
+                <span className={styles.liveDot} data-state={liveState} aria-hidden="true" />
+                <span className={styles.liveLabel}>{liveLabel}</span>
+                <span
+                  className={styles.liveValue}
+                  role="timer"
+                  aria-label={session ? "Tempo de foco" : "Tempo ocioso"}
+                >
+                  {elapsedDisplay}
+                </span>
               </div>
-            </div>
-
-            <div>
               <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
-                SAIR
+                Sair
               </button>
-              {logoutError && <div className={styles.logoutError}>{logoutError}</div>}
             </div>
-          </div>
+            {logoutError && <div className={styles.logoutError}>{logoutError}</div>}
+          </header>
 
-          <nav className={styles.nav}>
-            {NAV.map(([id, label]) => (
-              <NavLink
-                key={id}
-                to={`/${id}`}
-                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.active : ""}`}
-              >
-                {label}
-                <span className={styles.navLine} />
-              </NavLink>
-            ))}
-          </nav>
-        </header>
+          {completionNotice && (
+            <div className={styles.notice} role="alert">
+              <span className={styles.noticeTag}>Concluída</span>
+              <span className={styles.noticeText}>Sessão de foco concluída! Hora de fazer uma pausa.</span>
+            </div>
+          )}
+          {autoFinishError && (
+            <div className={`${styles.notice} ${styles.noticeError}`} role="alert">
+              <span className={styles.noticeTag}>Erro</span>
+              <span className={styles.noticeText}>
+                Não foi possível finalizar o timer automaticamente: {autoFinishError}. Abra Foco e tente finalizar
+                novamente.
+              </span>
+            </div>
+          )}
 
-        {completionNotice && (
-          <div className={styles.completionNotice} role="alert">
-            Sessão de foco concluída! Hora de fazer uma pausa.
-          </div>
-        )}
-        {autoFinishError && (
-          <div className={styles.autoFinishError} role="alert">
-            Não foi possível finalizar o timer automaticamente: {autoFinishError}. Abra Foco e tente finalizar novamente.
-          </div>
-        )}
-
-        <main className={styles.main}>
-          <Outlet />
-        </main>
-      </div>
+          <main className={styles.main}>
+            <Outlet />
+          </main>
+        </div>
+      </ParticleScene>
     </div>
   );
 }

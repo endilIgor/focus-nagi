@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApiRequestError } from "../api/client";
-import { useTheme } from "../theme/ThemeContext";
+import { ParticleAnchor, ParticleScene } from "../components/particles/ParticleScene";
 import { useAuth } from "./AuthContext";
 import styles from "./LoginPage.module.css";
 
@@ -14,15 +14,22 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export function LoginPage() {
   const { login } = useAuth();
-  const { theme } = useTheme();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Synchronous guard: state updates land too late to stop a second submit in the same tick.
+  const inFlight = useRef(false);
+  const ids = useId();
+  const titleId = `${ids}-title`;
+  const emailId = `${ids}-email`;
+  const passwordId = `${ids}-password`;
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError(null);
     setSubmitting(true);
     try {
@@ -35,94 +42,107 @@ export function LoginPage() {
         setError("Falha de rede. Tente novamente.");
       }
     } finally {
+      inFlight.current = false;
       setSubmitting(false);
     }
   };
 
   return (
-    <div
-      className="fn-root"
-      style={
-        {
-          "--acc": theme.acc,
-          "--acc2": theme.acc2,
-          "--glow": theme.glow,
-          "--soft": theme.soft,
-        } as React.CSSProperties
-      }
-    >
-      <div className="fn-grid-bg" />
-      <div className="fn-hatch-bg" />
-      <div className={styles.wrap}>
-        <div className={styles.card}>
-          <div className={styles.brand}>
-            <div className={styles.logo}>FN</div>
-            <div>
-              <div className={styles.brandTitle}>
-                FOCUS<span>//</span>NAGI
-              </div>
-              <div className={styles.brandSub}>SINGLE-OWNER TERMINAL &middot; v0.8</div>
-            </div>
+    <div className={styles.root}>
+      <ParticleScene>
+        <div className={styles.stage}>
+          <ParticleAnchor
+            className={styles.anchor}
+            shape={submitting ? "ring" : "cloud"}
+            progress={submitting ? 1 : 0}
+            running={submitting}
+            aria-hidden="true"
+          />
+
+          <div className={styles.eyebrow}>
+            <span className={styles.eyebrowLine} aria-hidden="true" />
+            Single-owner terminal · v0.8
+            <span className={`${styles.eyebrowLine} ${styles.eyebrowLineEnd}`} aria-hidden="true" />
           </div>
+          <h1 className={styles.headline}>Focus Nagi</h1>
 
-          <form className={styles.panel} onSubmit={onSubmit}>
-            <div className={styles.panelTopline} />
-            <div className="fn-corner-tl" />
-            <div className="fn-corner-br" />
-
-            <div className={styles.panelHeader}>
-              <span>// AUTENTICAÇÃO DE SESSÃO</span>
+          <form
+            className={styles.card}
+            onSubmit={onSubmit}
+            aria-labelledby={titleId}
+            aria-busy={submitting}
+          >
+            <div className={styles.cardHeader}>
+              <span>Autenticação de sessão</span>
               <span className={styles.online}>
-                <span className={styles.dot} />
-                ONLINE
+                <span className={styles.onlineDot} aria-hidden="true" />
+                Online
               </span>
             </div>
-            <h1 className={styles.title}>
-              Acesse seu console<span className={styles.caret}>_</span>
-            </h1>
+            <h2 id={titleId} className={styles.title}>
+              Acesse seu console
+              <span className={styles.caret} aria-hidden="true">
+                _
+              </span>
+            </h2>
 
             {error && (
-              <div className="fn-error-banner" role="alert">
+              <div className={styles.error} role="alert">
                 {error}
               </div>
             )}
 
-            <div className={styles.form}>
-              <label className="fn-field">
-                <span>E-MAIL</span>
+            <div className={styles.fields}>
+              <div className={styles.field}>
+                <label className={styles.label} htmlFor={emailId}>
+                  E-mail
+                </label>
                 <input
-                  className="fn-input"
+                  id={emailId}
+                  className={styles.input}
                   type="email"
                   autoComplete="email"
+                  placeholder="voce@dominio.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
-              </label>
-              <label className="fn-field">
-                <span>PASSWORD</span>
+              </div>
+              <div className={styles.field}>
+                <div className={styles.labelRow}>
+                  <label className={styles.label} htmlFor={passwordId}>
+                    Senha
+                  </label>
+                  <span className={styles.hint} aria-hidden="true">
+                    Supabase Auth
+                  </span>
+                </div>
                 <input
-                  className="fn-input"
+                  id={passwordId}
+                  className={styles.input}
                   type="password"
                   autoComplete="current-password"
+                  placeholder="••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-              </label>
-              <button type="submit" className={`fn-btn-primary ${styles.submit}`} disabled={submitting}>
+              </div>
+              <button type="submit" className={styles.submit} disabled={submitting}>
                 {submitting ? "Entrando..." : "Entrar na sessão"}
-                <span className={styles.sheen} />
+                <span className={styles.sheen} aria-hidden="true" />
               </button>
             </div>
 
             <div className={styles.footer}>
-              <span>SUPABASE AUTH &middot; BEARER JWT</span>
-              <span>AUTO REFRESH</span>
+              <span>Bearer JWT · RLS</span>
+              <span className={styles.footerAccent}>Auto refresh</span>
             </div>
           </form>
+
+          <p className={styles.note}>Sem cadastro público. Acesso restrito ao owner.</p>
         </div>
-      </div>
+      </ParticleScene>
     </div>
   );
 }

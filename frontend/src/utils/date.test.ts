@@ -14,3 +14,26 @@ describe("formatWeekRangePt", () => {
     expect(formatWeekRangePt("2020-12-28", "2021-01-03")).toBe("28 de dez de 2020 a 03 de jan de 2021");
   });
 });
+
+describe("weekStartMondayIso", () => {
+  it("returns the Monday of the week for every weekday, using calendar days only", async () => {
+    const { weekStartMondayIso } = await import("./date");
+    expect(weekStartMondayIso("2026-09-21")).toBe("2026-09-21");
+    expect(weekStartMondayIso("2026-09-24")).toBe("2026-09-21");
+    expect(weekStartMondayIso("2026-09-27")).toBe("2026-09-21");
+  });
+
+  it("crosses month and year boundaries", async () => {
+    const { weekStartMondayIso } = await import("./date");
+    expect(weekStartMondayIso("2026-10-04")).toBe("2026-09-28");
+    expect(weekStartMondayIso("2021-01-03")).toBe("2020-12-28");
+  });
+});
+
+describe("weekdayIndex", () => {
+  it("reads the weekday from calendar components (0 = Sunday)", async () => {
+    const { weekdayIndex } = await import("./date");
+    expect(weekdayIndex("2026-09-27")).toBe(0);
+    expect(weekdayIndex("2026-09-28")).toBe(1);
+  });
+});

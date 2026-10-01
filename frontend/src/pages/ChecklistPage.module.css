@@ -1,15 +1,246 @@
-.page { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-.dateLabel, .form label { color: var(--text-mute); font: 500 12px "JetBrains Mono", monospace; }
-.page input[type="date"], .form input { min-height: 40px; background: rgba(255,255,255,.04); border: 1px solid var(--hairline); color: var(--text-bright); padding: 8px 12px; font: 500 14px "Barlow", sans-serif; }
-.panel { width: 100%; border: 1px solid var(--hairline); background: rgba(255,255,255,.025); padding: 20px; }
-.form { display: grid; gap: 10px; }
-.formRow { display: flex; gap: 10px; }
-.formRow input { flex: 1; min-width: 0; }
-.list { list-style: none; margin: 16px 0 0; padding: 0; }
-.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
-.item { display: flex; gap: 12px; align-items: center; min-width: 0; cursor: pointer; overflow-wrap: anywhere; }
-.item input { accent-color: var(--acc); width: 18px; height: 18px; flex: none; }
-.done { text-decoration: line-through; color: var(--text-faint); }
-.remove { background: transparent; border: 0; color: var(--text-mute); cursor: pointer; padding: 8px; }
-.remove:hover { color: #ff8098; }
-@media(max-width: 600px) { .formRow { flex-direction: column; } .panel { padding: 14px; } }
+.page {
+  min-width: 0;
+}
+
+/* Week completion, amber like the reference's "done" accents. */
+.weekProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 30px;
+  max-width: 420px;
+}
+.weekProgressText {
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.weekProgressTrack {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--track);
+  overflow: hidden;
+}
+.weekProgressFill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--amber);
+  transition: width 0.8s var(--ease-out);
+}
+
+.weekSection {
+  margin-top: 60px;
+}
+.weekBar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+}
+.weekRange {
+  font: 400 15px var(--font-sans);
+  color: var(--text-dim);
+}
+.dateField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.dateField input {
+  width: auto;
+  min-height: 40px;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 24px;
+}
+.day {
+  min-width: 0;
+  padding: 12px 6px 12px 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-off);
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.35s ease;
+}
+.day:hover,
+.day[aria-pressed="true"] {
+  color: #fff;
+}
+.dayLabel {
+  display: block;
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.day[aria-pressed="true"] .dayLabel {
+  color: var(--amber);
+}
+.dayNum {
+  display: block;
+  margin-top: 6px;
+  font: 400 clamp(26px, 4vw, 48px) / 1.1 var(--font-sans);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.dayTrack {
+  display: block;
+  height: 2px;
+  margin-top: 14px;
+  border-radius: 2px;
+  background: var(--track);
+  overflow: hidden;
+}
+.dayFill {
+  display: block;
+  height: 100%;
+  background: var(--violet);
+  transition: width 0.8s var(--ease-out);
+}
+.dayFill[data-complete="true"] {
+  background: var(--amber);
+}
+
+.daySection {
+  margin-top: 60px;
+  max-width: 860px;
+}
+.selected {
+  margin-bottom: 14px;
+}
+
+/* ---- ChecklistPanel (also rendered on Today) ---- */
+.panel {
+  padding: 24px 26px;
+}
+.form {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px 24px;
+  flex-wrap: wrap;
+}
+.formField {
+  flex: 1;
+  min-width: min(100%, 240px);
+}
+.formInput {
+  margin-top: 6px;
+}
+.list {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 0;
+  animation: fnRise 0.5s var(--ease-out) both;
+}
+.row + .row {
+  box-shadow: inset 0 1px 0 rgba(186, 215, 247, 0.06);
+}
+.item {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  min-width: 0;
+  cursor: pointer;
+}
+/* Native checkbox kept for semantics, drawn as the reference's round toggle. */
+.check {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  border: 1px solid #3f4959;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-out);
+}
+.check::after {
+  content: "";
+  width: 6px;
+  height: 11px;
+  margin-top: -2px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.25s var(--ease-out);
+}
+.check:checked {
+  border-color: var(--violet);
+  background: var(--violet);
+}
+.check:checked::after {
+  transform: rotate(45deg) scale(1);
+}
+.check:disabled {
+  cursor: progress;
+}
+.title {
+  min-width: 0;
+  font: 300 20px/1.3 var(--font-sans);
+  letter-spacing: -0.01em;
+  color: #fff;
+  overflow-wrap: anywhere;
+  transition: color 0.3s ease;
+}
+.done {
+  color: var(--text-off);
+  text-decoration: line-through;
+}
+.remove {
+  flex: none;
+  min-height: 40px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-off);
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.remove:hover:not(:disabled) {
+  color: var(--rose-text);
+}
+
+@media (max-width: 640px) {
+  .dateField {
+    margin-left: 0;
+  }
+  .day {
+    padding-right: 0;
+  }
+  .dayLabel {
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+  .panel {
+    padding: 18px;
+  }
+  .form button {
+    width: 100%;
+  }
+  .title {
+    font-size: 18px;
+  }
+}

@@ -71,3 +71,37 @@ Comportamento aprovado:
 ## Decisões aprovadas
 
 Cinco telas principais; presets e duração personalizada; cancelamentos EXCLUÍDOS da base do contador ocioso; 00:00 sem histórico concluído; publicação de produção após verificação.
+
+
+## Fase Analytics e saúde — recorte autorizado para execução
+
+O histórico v3 acima é preservado. A retomada autoriza somente a tarefa 1 de `.hermes/plans/2026-10-10_112705-treino-alimentacao-analytics.md`: duração legível no gráfico Foco por dia.
+
+- Rótulos e detalhes usam `30min`, `1h`, `1h 30min`; zero no detalhe usa `0min`. Durações agregadas acima de 24h não reiniciam.
+- Preservar dados em minutos, agregação, proporções das barras, filtros, resumo, mapa e gráficos por hora/semana. Não alterar o helper compacto compartilhado.
+- Aceite: regressões para 90/60/30/0 minutos, mais de 24h, detalhes e proporções; suíte frontend, typecheck e build verdes.
+- Implementação pelo Claude Code CLI; usuário autorizou nesta retomada a conta API atual. Hermes revisa e verifica independentemente.
+- Sem autorização nova de commit, push, deploy ou migração remota. As permissões históricas de publicação v3 não se estendem a esta fase.
+- Tarefas seguintes, incluindo acesso pessoal de saúde e contratos propostos, permanecem fora deste recorte.
+
+
+## Autorização sequencial da nova fase
+
+O proprietário solicitou todas as tarefas restantes do plano da nova fase, com implementação local por Claude Code CLI e revisão Hermes por tarefa. Substitui a limitação anterior à tarefa 1, sem estender permissões históricas de publicação.
+
+Para tarefas 2–3 ficam aprovados AC02–AC05 da seção funcional de `.hermes/plans/2026-10-10_112705-treino-alimentacao-analytics.md`: mapa mensal com seleção própria, sete linhas segunda–domingo, colunas de semanas, mês inteiro incluindo futuros distintos, faixas fixas 0/>0<60/60<120/120<240/>=240 minutos, consulta até hoje, seleção acessível por mouse/toque/teclado e loading/erro explícitos com retry. Preservar os demais filtros e métricas.
+
+Saúde permanece condicionada às decisões pendentes descritas no plano (UUID/habilitação privada e limites/modelo/contratos), sem aprovação presumida por pergunta sem resposta. Commit/push/deploy/migrações remotas não autorizados.
+
+
+## Saúde — escopo aprovado para tarefas 4–14
+
+O proprietário aprovou a habilitação em tabela privada sem auto-habilitação, o modelo e os limites propostos e forneceu o UUID `731f2e70-9d17-4b31-bed2-badde776ef95` como identidade da sua conta Supabase. Identidade informada pelo usuário, não verificada contra o serviço remoto. Substitui as pendências correspondentes acima. Autorizada implementação local sequencial de todas as tarefas restantes, com Claude Code CLI e revisão/verificação independente. Login atual: Claude Pro.
+
+Especificação funcional e aceite: seções 1 e 2 de `.hermes/plans/2026-10-10_112705-treino-alimentacao-analytics.md` (AC01–AC12), aprovadas para implementação. Rotinas com nome e dias opcionais; exercícios em ordem de cadastro, séries positivas, modo único REPETITIONS/DURATION e alvo positivo; edição/exclusão com confirmação e exclusão transacional de rotina/exercícios. Limites: nome 150 caracteres, observação 2000, séries/repetições 1..1000, duração 1..86400 segundos, dias únicos 1..7. Alimentação: Café da manhã, Almoço, Café da tarde e Janta, nome até 150 e quantidade textual opcional até 150 caracteres; trim e vazio normalizado para null; CRUD e mudança de refeição. Sem consumo diário, prescrição ou métricas de saúde.
+
+Contrato de capacidade: GET `/api/auth/me` preserva id/email e adiciona `healthAccess: boolean`, consultado no banco com identidade autenticada. Sem habilitação retorna false; erro de consulta nunca concede acesso. RPCs de saúde verificam a mesma habilitação e proprietário por auth.uid(), incluindo chamadas diretas. Cliente não pode ler/escrever diretamente a tabela privada nem habilitar contas. Preservar acesso normal ao foco para contas antes permitidas. Habilitação administrativa real é separada da migration estrutural: não cadastrar automaticamente o UUID fornecido em migrations.
+
+Persistência SQL/RPC real com constraints/grants/RLS e isolamento; testes locais PGlite com identidades sintéticas, sem dados pessoais de produção. Chaves de cache por usuário, rotas `/treino` e `/alimentacao` protegidas pela capacidade, sem interferência no foco. Forms preservam entradas após erro e impedem duplo envio. Listagem paginada completa. Contratos HTTP seguem envelopes/paginação reais existentes; PATCH preserva campos omitidos, null limpa somente campos opcionais e modo/alvo permanecem coerentes. IDs/vínculos alheios não expõem dados. Definir contratos técnicos no checkpoint antes do RED seguindo convenções, sem extrapolar negócio.
+
+Evidências RED/GREEN originais por tarefa e revisão/gates antes de avançar. Sem novas dependências, enfraquecimento de assertions, commit, push, deploy ou migração/provisionamento remoto. QA com mocks não comprova sincronização/login de produção; relatar explicitamente a limitação.

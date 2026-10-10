@@ -47,6 +47,9 @@ export const DOMAIN_ERRORS: Readonly<Record<string, readonly [ContentfulStatusCo
   INVALID_FOCUS_SESSION_STATE: [409, "Illegal focus session state transition."],
   FOCUS_SESSION_ALREADY_RUNNING: [409, "There is already an active focus session."],
   TASK_HAS_FOCUS_SESSIONS: [409, "Task has focus sessions and cannot be deleted. Cancel it instead."],
+  HEALTH_ACCESS_DENIED: [403, "Health access is not enabled for this account."],
+  TRAINING_ROUTINE_NOT_FOUND: [404, "Training routine not found."],
+  TRAINING_EXERCISE_NOT_FOUND: [404, "Training exercise not found."],
 };
 
 export const unauthenticated = () => new ApiError(401, "UNAUTHENTICATED", "Authentication required.");

@@ -32,6 +32,8 @@ export interface Page<T> {
 export interface OwnerResponse {
   id: string;
   email: string | null;
+  /** Whether the database enables the personal health module for this account. */
+  healthAccess: boolean;
 }
 
 export interface SubtaskResponse {

@@ -7,3 +7,4 @@ export const GOAL_PERIODS = ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"] as const;
 export const GOAL_STATUSES = ["ACTIVE", "COMPLETED", "ARCHIVED"] as const;
 export const FOCUS_SESSION_STATUSES = ["RUNNING", "PAUSED", "COMPLETED", "CANCELLED"] as const;
 export const ANALYTICS_PERIODS = ["TODAY", "WEEK", "MONTH"] as const;
+export const TRAINING_EXERCISE_MODES = ["REPETITIONS", "DURATION"] as const;

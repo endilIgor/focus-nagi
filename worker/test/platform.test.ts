@@ -32,7 +32,7 @@ describe("platform behaviour", () => {
     const user = await h.newUser("owner@example.test");
     const res = await user.get("/api/auth/me");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: user.userId, email: "owner@example.test" });
+    expect(res.body).toEqual({ id: user.userId, email: "owner@example.test", healthAccess: false });
   });
 
   it("returns a JSON 404 for unknown API routes", async () => {

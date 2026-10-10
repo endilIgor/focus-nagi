@@ -142,24 +142,154 @@
   letter-spacing: -0.04em;
   color: #fff;
 }
+.heatNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.heatState {
+  margin-top: 30px;
+}
+.heatState[role="alert"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.heatLayout {
+  --heat-cell: 52px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 24px 48px;
+  align-items: start;
+  margin-top: 30px;
+}
+/* Seven Monday–Sunday rows; weekday labels first, then week columns left to right. */
 .heatGrid {
   display: grid;
-  grid-template-rows: repeat(7, 1fr);
+  grid-template-rows: repeat(7, auto);
   grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
   gap: 6px;
-  margin-top: 30px;
-  overflow-x: auto;
+  min-width: 0;
+}
+.heatWeekday {
+  align-self: center;
+  padding-right: 4px;
+  font: 400 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.heatCell,
+.heatPad {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
 }
 .heatCell {
-  aspect-ratio: 1;
-  max-height: 30px;
-  border-radius: 50%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background: var(--heat-bg, var(--track));
+  box-shadow: inset 0 0 0 1px var(--hairline);
   animation: fnPop 0.6s var(--ease-out) both;
-  transition: transform 0.25s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .heatCell:hover {
-  transform: scale(1.4);
+  transform: scale(1.08);
+}
+.heatCell[aria-current="date"] {
+  box-shadow: inset 0 0 0 1px var(--hairline-strong), 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+.heatPad {
+  visibility: hidden;
+}
+/* Fixed intensity levels (same bands every month). */
+.heatCell[data-level="1"],
+.heatSwatch[data-level="1"] {
+  --heat-bg: rgba(128, 82, 255, 0.32);
+}
+.heatCell[data-level="2"],
+.heatSwatch[data-level="2"] {
+  --heat-bg: rgba(128, 82, 255, 0.62);
+}
+.heatCell[data-level="3"],
+.heatSwatch[data-level="3"] {
+  --heat-bg: var(--violet);
+}
+.heatCell[data-level="4"],
+.heatSwatch[data-level="4"] {
+  --heat-bg: var(--amber);
+}
+/* Future days: no fill, dashed outline — readable without color. */
+.heatCell[data-future="true"],
+.heatSwatch[data-future="true"] {
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed var(--hairline-strong);
+}
+/* After the future reset so a selected future day keeps its ring. */
+.heatCell[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px #fff;
+}
+.heatAside {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.heatDetails {
+  padding: 20px 22px;
+  min-height: 112px;
+}
+.heatDetails p {
+  margin: 0;
+}
+.heatDetailDate {
+  font: 600 12px var(--font-sans);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+.heatDetails .heatDetailValue {
+  margin-top: 10px;
+  font: 400 40px/1.1 var(--font-sans);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.heatDetailFuture {
+  font: 200 20px/1.4 var(--font-sans);
+  letter-spacing: 0;
+  color: var(--text-dim);
+}
+.heatDetailHint {
+  font: 200 16px/1.5 var(--font-sans);
+  color: var(--text-mute);
+}
+.heatLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: 400 12px var(--font-sans);
+  color: var(--text-mute);
+}
+.heatLegend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.heatSwatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--heat-bg, var(--track));
+  box-shadow: inset 0 0 0 1px var(--hairline);
 }
 
 /* ---- charts ---- */
@@ -173,6 +303,7 @@
 .chartPanel {
   padding: 26px 24px;
   min-width: 0;
+  overflow-x: auto;
 }
 .chartTitle {
   margin: 0;
@@ -187,17 +318,19 @@
   height: 220px;
   margin-top: 30px;
 }
+/* Columns never shrink below a whole "1h 30min"; a month scrolls inside the panel. */
 .dayBarCol {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   align-items: center;
   gap: 10px;
   height: 100%;
-  min-width: 0;
+  min-width: 64px;
 }
 .dayBarValue {
+  white-space: nowrap;
   font: 400 13px var(--font-sans);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
@@ -284,6 +417,13 @@
   }
 }
 
+@media (max-width: 720px) {
+  .heatLayout {
+    --heat-cell: 44px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 560px) {
   .summary {
     margin-top: 48px;
@@ -296,8 +436,5 @@
   }
   .dayBars {
     min-width: 520px;
-  }
-  .chartPanel {
-    overflow-x: auto;
   }
 }

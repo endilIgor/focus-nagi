@@ -5,7 +5,17 @@ import type { AnalyticsPeriod } from "../api/types";
 import { ParticleAnchor } from "../components/particles/ParticleScene";
 import { formatMinutesAsHm } from "../hooks/useClock";
 import { useTheme } from "../theme/ThemeContext";
-import { evaluateWeek, fillHourlyFocus, periodRange, weekInputFromDate, weekStartFromInput } from "../utils/analytics";
+import {
+  buildMonthHeatmap,
+  evaluateWeek,
+  fillHourlyFocus,
+  FOCUS_LEVEL_BANDS,
+  monthQueryRange,
+  periodRange,
+  shiftMonth as shiftMonthKey,
+  weekInputFromDate,
+  weekStartFromInput,
+} from "../utils/analytics";
 import { addDaysIso, formatWeekRangePt, todayIso, weekdayLabel } from "../utils/date";
 import { describeApiError } from "../utils/errors";
 import { ANALYTICS_PERIOD_LABEL } from "../utils/labels";
@@ -13,8 +23,129 @@ import styles from "./AnalyticsPage.module.css";
 
 const PERIODS: AnalyticsPeriod[] = ["TODAY", "WEEK", "MONTH"];
 
+// Daily chart only: "30min", "1h", "1h 30min"; hours are not wrapped at 24h.
+function formatDayDuration(totalMinutes: number): string {
+  const minutes = Math.max(0, Math.round(totalMinutes));
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest}min`;
+  return rest === 0 ? `${hours}h` : `${hours}h ${rest}min`;
+}
+
 function ratingLabel(rating: string): string {
   return `${rating.charAt(0).toUpperCase()}${rating.slice(1)}.`;
+}
+
+const WEEKDAY_ROWS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+
+function monthName(month: string): string {
+  return new Date(`${month}-01T12:00:00Z`).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+function dayName(date: string, withWeekday = false): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString("pt-BR", {
+    ...(withWeekday ? { weekday: "long" as const } : {}),
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function legendLabel({ minMinutes, maxMinutes }: (typeof FOCUS_LEVEL_BANDS)[number]): string {
+  if (maxMinutes === null) return `${minMinutes}min ou mais`;
+  return minMinutes === maxMinutes ? `${minMinutes}min` : `${minMinutes}–${maxMinutes}min`;
+}
+
+/** Month map with its own month selection; shares the by-day cache key (and focus invalidation) with the charts. */
+function FocusMonthMap({ today }: { today: string }) {
+  const currentMonth = today.slice(0, 7);
+  const [month, setMonth] = useState(currentMonth);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const range = monthQueryRange(month, today);
+  const query = useQuery({
+    queryKey: ["analytics", "by-day", range?.from, range?.to],
+    queryFn: () => analyticsApi.byDay(range!.from, range!.to),
+    enabled: range !== null,
+  });
+  // Only data for this month's own key, never a placeholder from another month.
+  const heatmap = range === null ? buildMonthHeatmap(month, today, []) : query.isSuccess ? buildMonthHeatmap(month, today, query.data) : null;
+  const selected = heatmap?.days.find((day) => day.date === selectedDate) ?? null;
+  const name = monthName(month);
+  const title = `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+  const goTo = (delta: number) => {
+    const next = shiftMonthKey(month, delta);
+    if (next > currentMonth) return;
+    setMonth(next);
+    setSelectedDate(null);
+  };
+
+  return (
+    <section className={styles.heatSection} aria-label="Mapa de foco">
+      <div className={styles.sectionHead}>
+        <h2 className={styles.chartTitleLarge}>Mapa de foco</h2>
+        <div className={styles.heatNav}>
+          <button type="button" className="fn-chip" onClick={() => goTo(-1)}>← Anterior</button>
+          <span className={styles.rangeLabel} aria-live="polite">{title}</span>
+          <button type="button" className="fn-chip" onClick={() => goTo(1)} disabled={month >= currentMonth}>Seguinte →</button>
+        </div>
+      </div>
+
+      {range !== null && query.isError ? (
+        <div className={`fn-error-banner ${styles.heatState}`} role="alert">
+          <span>{describeApiError(query.error)}</span>
+          <button type="button" className="fn-chip" onClick={() => query.refetch()} disabled={query.isFetching}>Tentar novamente</button>
+        </div>
+      ) : !heatmap ? (
+        <p className={`fn-empty ${styles.heatState}`} role="status">Carregando mapa…</p>
+      ) : (
+        <div className={styles.heatLayout}>
+          <div className={styles.heatGrid} role="group" aria-label={`Dias de ${name}`} style={{ gridTemplateColumns: `auto repeat(${heatmap.columns.length}, minmax(0, var(--heat-cell)))` }}>
+            {WEEKDAY_ROWS.map((label) => <span key={label} className={styles.heatWeekday} aria-hidden="true">{label}</span>)}
+            {heatmap.columns.flatMap((column) => column.map((cell) => cell.kind === "padding" ? (
+              <span key={`pad-${cell.column}-${cell.row}`} data-heat-cell="" data-row={cell.row} className={styles.heatPad} aria-hidden="true" />
+            ) : (
+              <button
+                key={cell.date}
+                type="button"
+                data-heat-cell=""
+                data-row={cell.row}
+                data-level={cell.level ?? undefined}
+                data-future={cell.isFuture ? "true" : undefined}
+                className={styles.heatCell}
+                aria-label={`${dayName(cell.date)} · ${cell.focusedMinutes === null ? "dia futuro, sem registro" : formatDayDuration(cell.focusedMinutes)}`}
+                aria-pressed={cell.date === selectedDate}
+                aria-current={cell.isToday ? "date" : undefined}
+                style={{ animationDelay: `${cell.column * 35 + cell.row * 12}ms` }}
+                onClick={() => setSelectedDate(cell.date)}
+              />
+            )))}
+          </div>
+
+          <div className={styles.heatAside}>
+            <section className={`fn-glass ${styles.heatDetails}`} aria-label="Detalhes do dia" aria-live="polite">
+              {selected ? (
+                <>
+                  <p className={styles.heatDetailDate}>{dayName(selected.date, true)}</p>
+                  <p className={`${styles.heatDetailValue} ${selected.isFuture ? styles.heatDetailFuture : ""}`}>
+                    {selected.focusedMinutes === null ? "Dia futuro, sem registro ainda" : formatDayDuration(selected.focusedMinutes)}
+                  </p>
+                </>
+              ) : (
+                <p className={styles.heatDetailHint}>Selecione um dia para ver data e duração.</p>
+              )}
+            </section>
+            <ul className={styles.heatLegend} aria-label="Legenda de intensidade">
+              {FOCUS_LEVEL_BANDS.map((band) => (
+                <li key={band.level}><span className={styles.heatSwatch} data-level={band.level} aria-hidden="true" />{legendLabel(band)}</li>
+              ))}
+              <li><span className={styles.heatSwatch} data-future="true" aria-hidden="true" />Futuro</li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 export function AnalyticsPage() {
@@ -71,7 +202,6 @@ export function AnalyticsPage() {
   const hourMax = Math.max(1, ...byHour.map((hour) => hour.focusedMinutes));
   const weekMax = Math.max(1, ...byWeek.map((entry) => entry.focusedMinutes));
   const bestHour = byHour.reduce((best, next) => next.focusedMinutes > best.focusedMinutes ? next : best);
-  const heatMax = Math.max(1, ...byDay.map((day) => day.focusedMinutes));
 
   return (
     <div className={styles.page}>
@@ -159,23 +289,13 @@ export function AnalyticsPage() {
         </p>
       </section>}
 
-      <section className={styles.heatSection} aria-label="Mapa de foco">
-        <div className={styles.sectionHead}>
-          <h2 className={styles.chartTitleLarge}>Mapa de foco</h2>
-          <span className="fn-mono-label">MENOS ▪ MAIS</span>
-        </div>
-        <div className={styles.heatGrid}>{byDay.map((day, index) => {
-          const ratio = day.focusedMinutes / heatMax;
-          const bg = day.focusedMinutes === 0 ? "#10141f" : ratio < .2 ? theme.glow : ratio < .45 ? theme.soft : ratio < .75 ? theme.acc : theme.acc2;
-          return <div key={day.date} title={`${day.date} · ${day.focusedMinutes} min`} className={styles.heatCell} style={{ background: bg, animationDelay: `${Math.floor(index / 7) * 35 + (index % 7) * 12}ms` }} />;
-        })}</div>
-      </section>
+      <FocusMonthMap today={today} />
 
       <section className={styles.charts}>
         <div className={`fn-glass ${styles.chartPanel}`} role="region" aria-label="Foco por dia">
           <h2 className={styles.chartTitle}>Foco por dia</h2>
-          <div className={styles.dayBars}>{byDay.map((day, index) => <div key={day.date} className={styles.dayBarCol} title={`${day.date} · ${day.focusedMinutes} min`}>
-            <span className={styles.dayBarValue}>{day.focusedMinutes || ""}</span>
+          <div className={styles.dayBars}>{byDay.map((day, index) => <div key={day.date} className={styles.dayBarCol} title={`${day.date} · ${formatDayDuration(day.focusedMinutes)}`}>
+            <span className={styles.dayBarValue}>{day.focusedMinutes ? formatDayDuration(day.focusedMinutes) : ""}</span>
             <div className={styles.dayBar} style={{ height: `${Math.round(day.focusedMinutes / dayMax * 100)}%`, background: `linear-gradient(180deg, ${theme.acc2}, ${theme.acc})`, animationDelay: `${index * 70}ms` }} />
             <span className={styles.dayBarLabel}>{period === "TODAY" ? "HOJE" : weekdayLabel(day.date).slice(0, 1)}</span>
           </div>)}</div>

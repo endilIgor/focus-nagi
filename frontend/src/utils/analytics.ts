@@ -1,4 +1,4 @@
-import type { AnalyticsPeriod, HourFocusResponse } from "../api/types";
+import type { AnalyticsPeriod, DayFocusResponse, HourFocusResponse } from "../api/types";
 import { addDaysIso } from "./date";
 
 /** Date-only arithmetic is based on calendar components, never timestamp-to-local conversions. */
@@ -72,4 +72,104 @@ export function fillHourlyFocus(hours: HourFocusResponse[]): HourFocusResponse[]
     hour,
     focusedMinutes: minutesByHour.get(hour) ?? 0,
   }));
+}
+
+/** Fixed intensity of a day's focus, independent of the rest of the month. */
+export type FocusLevel = 0 | 1 | 2 | 3 | 4;
+
+/** Legend bands in minutes (inclusive); `maxMinutes: null` means open-ended. */
+export const FOCUS_LEVEL_BANDS: ReadonlyArray<{ level: FocusLevel; minMinutes: number; maxMinutes: number | null }> = [
+  { level: 0, minMinutes: 0, maxMinutes: 0 },
+  { level: 1, minMinutes: 1, maxMinutes: 59 },
+  { level: 2, minMinutes: 60, maxMinutes: 119 },
+  { level: 3, minMinutes: 120, maxMinutes: 239 },
+  { level: 4, minMinutes: 240, maxMinutes: null },
+];
+
+/** zero / >0 and <60 / 60 to <120 / 120 to <240 / >=240 minutes. */
+export function focusLevel(minutes: number): FocusLevel {
+  if (!(minutes > 0)) return 0;
+  return minutes >= 240 ? 4 : minutes >= 120 ? 3 : minutes >= 60 ? 2 : 1;
+}
+
+/** Month keys are calendar `YYYY-MM` strings. */
+export function shiftMonth(month: string, delta: number): string {
+  const [year, number] = month.split("-").map(Number);
+  return isoDay(new Date(Date.UTC(year, number - 1 + delta, 1))).slice(0, 7);
+}
+
+export function isFutureMonth(month: string, today: string): boolean {
+  return month > today.slice(0, 7);
+}
+
+/** Every calendar day shown by the month map, future days included. */
+export function monthDisplayRange(month: string): { from: string; to: string } {
+  const [year, number] = month.split("-").map(Number);
+  return { from: `${month}-01`, to: isoDay(new Date(Date.UTC(year, number, 0))) };
+}
+
+/** Days with possible focus records: month start up to today; null when the whole month is still ahead. */
+export function monthQueryRange(month: string, today: string): { from: string; to: string } | null {
+  if (isFutureMonth(month, today)) return null;
+  return periodRange("MONTH", today, undefined, month);
+}
+
+export interface MonthHeatmapDay {
+  kind: "day";
+  date: string;
+  /** 0 = Monday … 6 = Sunday. */
+  row: number;
+  /** Week column, 0 = week containing the 1st. */
+  column: number;
+  isFuture: boolean;
+  isToday: boolean;
+  /** Null for future days: no focus is reported for them, not even zero. */
+  focusedMinutes: number | null;
+  level: FocusLevel | null;
+}
+
+/** Slot before the 1st or after the last day: no date, no data, not interactive. */
+export interface MonthHeatmapPadding {
+  kind: "padding";
+  row: number;
+  column: number;
+}
+
+export type MonthHeatmapCell = MonthHeatmapDay | MonthHeatmapPadding;
+
+export interface MonthHeatmap {
+  month: string;
+  /** Days of the month in calendar order, each exactly once. */
+  days: MonthHeatmapDay[];
+  /** Week columns, each with seven cells indexed by row (Monday … Sunday). */
+  columns: MonthHeatmapCell[][];
+}
+
+/** Lays out a whole month as Monday–Sunday rows by week columns.
+ * Elapsed days (up to today) without a record count as zero; later days and
+ * records outside the month or after today are ignored. */
+export function buildMonthHeatmap(month: string, today: string, records: DayFocusResponse[]): MonthHeatmap {
+  const { from, to } = monthDisplayRange(month);
+  const minutesByDate = new Map(records.map((record) => [record.date, record.focusedMinutes]));
+  const offset = (utcDay(from).getUTCDay() + 6) % 7;
+  const length = Number(to.slice(8));
+  const days: MonthHeatmapDay[] = Array.from({ length }, (_, index) => {
+    const date = addDaysIso(from, index);
+    const isFuture = date > today;
+    const focusedMinutes = isFuture ? null : minutesByDate.get(date) ?? 0;
+    return {
+      kind: "day",
+      date,
+      row: (offset + index) % 7,
+      column: Math.floor((offset + index) / 7),
+      isFuture,
+      isToday: date === today,
+      focusedMinutes,
+      level: focusedMinutes === null ? null : focusLevel(focusedMinutes),
+    };
+  });
+  const columns = Array.from({ length: Math.ceil((offset + length) / 7) }, (_, column) =>
+    Array.from({ length: 7 }, (_, row): MonthHeatmapCell => days[column * 7 + row - offset] ?? { kind: "padding", row, column }),
+  );
+  return { month, days, columns };
 }

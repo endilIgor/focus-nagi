@@ -2,13 +2,17 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FocusSessionResponse } from "../api/types";
+import type { FocusSessionResponse, OwnerResponse } from "../api/types";
+import userEvent from "@testing-library/user-event";
+import shellCss from "./AppShell.module.css?raw";
+
+const mockAuth = vi.hoisted(() => ({ owner: null as OwnerResponse | null, logout: vi.fn() }));
 
 const mockSession: { current: FocusSessionResponse | null } = { current: null };
 const mockNow = { current: Date.parse("2026-09-22T12:25:00Z") };
 
 vi.mock("../auth/AuthContext", () => ({
-  useAuth: () => ({ logout: vi.fn() }),
+  useAuth: () => mockAuth,
 }));
 vi.mock("../theme/ThemeContext", () => ({
   useTheme: () => ({
@@ -378,5 +382,67 @@ describe("AppShell idle counter", () => {
     });
 
     await waitFor(() => expect(screen.getByRole("timer", { name: "Tempo ocioso" })).toHaveTextContent("01:10:00"));
+  });
+});
+
+describe("T13 — navegação de saúde", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuth.owner = { id: "synthetic-owner", email: null, healthAccess: true };
+    mockSession.current = null;
+    mockedList.mockResolvedValue(page([]));
+  });
+
+  function tree(path = "/alimentacao") {
+    return <QueryClientProvider client={newQueryClient()}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<AppShell />}><Route path="*" element={<div>Conteúdo privado</div>} /></Route>
+          <Route path="/login" element={<div>Login após sair</div>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>;
+  }
+
+  it("shows seven links in order and positions the active indicator using the real count", () => {
+    render(tree());
+    const nav = screen.getByRole("navigation", { name: "Principal" });
+    expect(within(nav).queryByRole("link", { name: "Alimentação" })).not.toBeNull();
+    expect(within(nav).getAllByRole("link").map(e => e.textContent)).toEqual(["Hoje", "Foco", "Checklist", "Diário", "Analytics", "Treino", "Alimentação"]);
+    expect(within(nav).getByRole("link", { name: "Alimentação" })).toHaveAttribute("aria-current", "page");
+    expect(nav.style.getPropertyValue("--nav-count")).toBe("7");
+    expect(nav.style.getPropertyValue("--nav-index")).toBe("6");
+  });
+
+  it.each([false, undefined, "true", 1, null])("keeps only existing links for non-strict capability %s", (capability) => {
+    mockAuth.owner = { id: "blocked", email: null, healthAccess: capability } as unknown as OwnerResponse;
+    render(tree("/hoje"));
+    const nav = screen.getByRole("navigation", { name: "Principal" });
+    expect(within(nav).getAllByRole("link")).toHaveLength(5);
+    expect(within(nav).queryByRole("link", { name: "Treino" })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: "Alimentação" })).toBeNull();
+  });
+
+  it("removes health navigation when switching to an account without capability", () => {
+    const view = render(tree());
+    expect(screen.queryByRole("link", { name: "Treino" })).not.toBeNull();
+    mockAuth.owner = { id: "blocked", email: null, healthAccess: false };
+    view.rerender(tree());
+    expect(screen.queryByRole("link", { name: "Treino" })).toBeNull();
+    expect(screen.getAllByRole("link")).toHaveLength(5);
+  });
+
+  it("preserves logout on a health route", async () => {
+    mockAuth.logout.mockResolvedValue(undefined);
+    render(tree());
+    await userEvent.click(screen.getByRole("button", { name: "Sair" }));
+    expect(mockAuth.logout).toHaveBeenCalledTimes(1);
+    await screen.findByText("Login após sair");
+  });
+
+  it("uses a variable navigation count and wrapping labels instead of five hardcoded columns", () => {
+    expect(shellCss).not.toMatch(/repeat\(5,|100% \/ 5/);
+    expect(shellCss).toContain("var(--nav-count)");
+    expect(shellCss).toMatch(/\.navItem\s*\{[^}]*overflow-wrap:\s*anywhere/);
   });
 });

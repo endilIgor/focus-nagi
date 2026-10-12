@@ -68,10 +68,13 @@
 .nav {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(5, 88px);
+  grid-template-columns: repeat(var(--nav-count), 104px);
 }
 .navItem {
   display: flex;
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
   align-items: center;
   justify-content: center;
   min-height: 44px;
@@ -95,7 +98,7 @@
 .navDot {
   position: absolute;
   bottom: 2px;
-  left: calc((var(--nav-index) + 0.5) * 100% / 5 - 3px);
+  left: calc((var(--nav-index) + 0.5) * 100% / var(--nav-count) - 3px);
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -213,11 +216,11 @@
 }
 
 /* Below the one-line width the nav takes its own full-width row under brand and status. */
-@media (max-width: 960px) {
+@media (max-width: 1200px) {
   .nav {
     order: 3;
     flex: 1 0 100%;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--nav-count), minmax(0, 1fr));
   }
 }
 

@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./auth/AuthContext";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { LoginPage } from "./auth/LoginPage";
 import { RequireAuth } from "./auth/RequireAuth";
 import { AppShell } from "./layout/AppShell";
@@ -9,6 +10,13 @@ import { ChecklistPage } from "./pages/ChecklistPage";
 import { FocusPage } from "./pages/FocusPage";
 import { JournalPage } from "./pages/JournalPage";
 import { TodayPage } from "./pages/TodayPage";
+import { TrainingPage } from "./pages/TrainingPage";
+import { NutritionPage } from "./pages/NutritionPage";
+
+function RequireHealthAccess({ children }: { children: ReactNode }) {
+  const { owner } = useAuth();
+  return owner?.healthAccess === true ? <>{children}</> : <Navigate to="/hoje" replace />;
+}
 
 export function App() {
   return (
@@ -33,6 +41,8 @@ export function App() {
               <Route path="/notas" element={<Navigate to="/checklist" replace />} />
               <Route path="/diario" element={<JournalPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/treino" element={<RequireHealthAccess><TrainingPage /></RequireHealthAccess>} />
+              <Route path="/alimentacao" element={<RequireHealthAccess><NutritionPage /></RequireHealthAccess>} />
               <Route path="/" element={<Navigate to="/hoje" replace />} />
             </Route>
             <Route path="*" element={<Navigate to="/hoje" replace />} />

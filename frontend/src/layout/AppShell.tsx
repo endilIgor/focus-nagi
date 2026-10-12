@@ -32,7 +32,10 @@ const NAV: Array<[string, string]> = [
 
 export function AppShell() {
   const { theme } = useTheme();
-  const { logout } = useAuth();
+  const { logout, owner } = useAuth();
+  const nav = owner?.healthAccess === true
+    ? [...NAV, ["treino", "Treino"], ["alimentacao", "Alimentação"]]
+    : NAV;
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const queryClient = useQueryClient();
@@ -50,7 +53,7 @@ export function AppShell() {
   const paused = session?.status === "PAUSED";
   const liveState = running ? "running" : paused ? "paused" : "idle";
   const liveLabel = running ? "Em foco" : paused ? "Pausada" : "Ocioso";
-  const activeNavIndex = NAV.findIndex(([id]) => pathname === `/${id}` || pathname.startsWith(`/${id}/`));
+  const activeNavIndex = nav.findIndex(([id]) => pathname === `/${id}` || pathname.startsWith(`/${id}/`));
   const logoFocusState = completionNotice ? "completed" : session ? "focusing" : "idle";
   const elapsedSeconds = session ? computeElapsedSeconds(session, now) : 0;
   const remainingSeconds = session
@@ -153,9 +156,9 @@ export function AppShell() {
             <nav
               className={styles.nav}
               aria-label="Principal"
-              style={{ "--nav-index": Math.max(0, activeNavIndex) } as React.CSSProperties}
+              style={{ "--nav-index": Math.max(0, activeNavIndex), "--nav-count": nav.length } as React.CSSProperties}
             >
-              {NAV.map(([id, label]) => (
+              {nav.map(([id, label]) => (
                 <NavLink
                   key={id}
                   to={`/${id}`}

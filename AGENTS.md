@@ -6,7 +6,15 @@ Leia spec.md, plan.md e .hermes/plans/2026-10-10_112705-treino-alimentacao-analy
 
 ## Papéis e execução
 
+### Retomada atual — Claude Code CLI solicitado pelo proprietário
+
+Checkpoint supersedente: T11 concluída localmente/revisada. Claude reviewer encontrou refetch de exercícios da rotina excluída; Claude escreveu4 regressões e parou captura negada, parent capturou RED original2AssertionError/47pass antes fix. Claude corrigiu com flushSync/desmontagem/removeQueries exact owner/routine antes invalidate. Parent gates alvo49/49, frontend362/362, Worker580/580, typecheck/lint/build/diff0; fresh Claude review passed=true sem blockers. REDs herdados GPT preservados; cache cases inicialmente verdes são regressão; sem QA navegador/remoto ainda. Próxima T12, depois13/14 sequenciais. Evidência `.hermes/evidence/health-task11/hermes-final-gates.json` e `claude-final-review.jsonl`. Captura de RED quando negada na CLI é executada pelo parent após saída do escritor de testes, antes produção; não usar variantes para contornar negativas.
+
+O usuário pediu “pode mandar o claude continuar o projeto”. Esta decisão supersede o executor GPT exclusivo/no-retry Claude dos checkpoints históricos para uma nova tentativa explícita. Claude CLI atual autenticado como Claude API account, conta já autorizada nesta fase; sem alteração de credenciais. Nenhum processo Claude/Vitest ativo observado antes do lançamento. T11 tem draft herdado GPT e gates salvos, mas falta aprovação independente; parent repetiu alvo TrainingPage45/45 e diff-check0. Retomar concretamente pela revisão T11, preservando produção/REDs, e corrigir bloqueadores via Claude com regressões antes de GREEN. Só liberar12 após review/gates11. T12–14 seguem sequenciais sob autorização existente, um escritor, commits locais exclusivos do parent após audit; sem push/deploy/remoto/dependências novas. Novo limite real implica checkpoint e parada, não loop de retries.
+
 ### Exceção autorizada atual — takeover GPT/Hermes
+
+Continuação atual: usuário reiterou todas as tarefas na sessão GPT/OpenAI Codex. T11 já tinha escritor GPT ativo deleg_1cd3f039; parent preserva um escritor e só libera12 após review/gates11. QA local independente pode preparar evidências sem alterar fontes concorrentes. Commits locais parent autorizados; push/deploy/migrações remotas continuam fora do escopo.
 
 Estado mais recente: T10 concluída com3 regressões/fixes pelo parent GPT, alvo25/25 e frontend338/338, Worker580/580, typecheck/lint/build/diff0 e freshreviewGPT passed=true. Supersede checkpoint de quota e ponteiros históricos abaixo. Próxima11, seguida12–14 sequenciais. HerançaRED/diferenças de evidência preservadas. Nenhum Claudewriterativo.
 

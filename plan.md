@@ -178,6 +178,31 @@ Usuário solicitou “pode mandar continuar”. Retomar pela tarefa 5 com Claude
   - QA de navegador e persistência integrada ficam para a Tarefa 14.
 - Relatório: `.hermes/evidence/health-task6/report.md`.
 
+### Retomada atual — Tarefa 8
+
+O proprietário solicitou continuar o projeto e autorizou explicitamente o Claude Code CLI com a conta API atual, ciente de possível consumo de créditos. O status de autenticação nesta retomada retornou `Claude API account`; isso substitui a exigência de Pro para esta continuação, sem alterar credenciais. Tarefas 1–7 preservadas. Baseline independente Hermes: Worker 501/501 e frontend 281/281, em execução serial, logs em `.hermes/evidence/health-task8/resume/`. Próxima tarefa: 8, API alimentação; seguir 9–14 somente após revisão e gates por tarefa. Commit local somente pelo parent após audit conforme `.hermes/commit-authorization.md`; sem push/deploy/provisionamento ou migration remota.
+
+- Estado da Tarefa 8: **concluída e verificada independentemente por Hermes**. Próxima: Tarefa9 clientes frontend. Hermes repetiu alvo199/199, Worker580/580 e frontend281/281, typecheck/lint/build/diff-check com stdout integral em `.hermes/evidence/health-task8/resume/hermes-*.log` e ledger `hermes-gates.json`. Fresh Claude reviewer `passed=true`, sem blockers, em `claude-review.json` e `review-verdict.json`. O estado abaixo registra os gates históricos do implementador; o git negado refere-se somente à sessão Claude. Limitação menor herdada: helpers HTTP medem comprimento UTF-16; SQL usa code points, podendo haver rejeição mais estrita de caracteres fora do BMP no HTTP. Sem refatoração global nesta tarefa.
+- Contratos registrados antes do RED: `.hermes/evidence/health-task8/resume/contracts.md`.
+- Produção:
+  - `worker/src/routes/nutrition.ts` (novo): CRUD `/api/nutrition/foods[/:id]` sobre as 5 RPCs da T7, com POST 201, GET paginado (`pageQuery` padrão 20, máx. 100), GET/PATCH 200 e DELETE 204.
+  - PATCH: omitido mantém; `null` limpa somente `quantity`. Mover de refeição = PATCH de `meal`, preservando id e ordem.
+  - `routes/index.ts` registra as rotas; `domain.ts` ganhou `NUTRITION_MEALS`; `errors.ts` mapeia `NUTRITION_FOOD_NOT_FOUND` ⇒ 404 "Nutrition food not found.".
+  - Sem migration nova; a migration da T7 e os testes antigos não foram alterados.
+- Testes: `worker/test/nutrition.test.ts` (79), com HTTP Hono e SQL real PGlite.
+  - TDD vertical em 4 fatias: create/get+mapeamento, list, PATCH, DELETE+capacidade.
+  - RED: 67 falhas, todas `AssertionError`, 0 errors e 0 skipped (37 + 5 + 21 + 4).
+  - Guardas verdes por herança, rotuladas como regressão e não como RED: 401 anônimo (middleware), 10 RPCs diretas (T7) e persistência via RPC direta.
+- Gates seriais, com 768MB e `--maxWorkers=1 --no-file-parallelism`:
+  - Alvo do plano: 199/199.
+  - Worker: 580/580; typecheck, lint e build dry-run ok.
+  - Frontend: 281/281; typecheck e build ok.
+  - `git diff --check` não executado (git negado nesta sessão). A busca por espaços finais nos arquivos tocados não achou nada.
+- Limitações:
+  - PGlite local, não PostgREST/Supabase remoto.
+  - Clientes frontend/UI pendentes (Tarefas 9–12); QA navegador pendente (Tarefa 14).
+- Relatório: `.hermes/evidence/health-task8/resume/report.md`.
+
 ### Nova fase — Tarefa 7 (persistência dos alimentos por refeição)
 
 - Tarefa 6: concluída e verificada pelo Hermes (`.hermes/evidence/health-task6/hermes-verified.md`: Worker 416/416, frontend 281/281, typecheck/lint/build, reviewer passed=true).

@@ -50,6 +50,7 @@ export const DOMAIN_ERRORS: Readonly<Record<string, readonly [ContentfulStatusCo
   HEALTH_ACCESS_DENIED: [403, "Health access is not enabled for this account."],
   TRAINING_ROUTINE_NOT_FOUND: [404, "Training routine not found."],
   TRAINING_EXERCISE_NOT_FOUND: [404, "Training exercise not found."],
+  NUTRITION_FOOD_NOT_FOUND: [404, "Nutrition food not found."],
 };
 
 export const unauthenticated = () => new ApiError(401, "UNAUTHENTICATED", "Authentication required.");

@@ -7,6 +7,7 @@ import { registerFocusSessionRoutes } from "./focusSessions";
 import { registerGoalRoutes } from "./goals";
 import { registerJournalRoutes } from "./journal";
 import { registerNoteRoutes } from "./notes";
+import { registerNutritionRoutes } from "./nutrition";
 import { registerProjectRoutes } from "./projects";
 import { registerTaskRoutes } from "./tasks";
 import { registerTodayRoutes } from "./today";
@@ -24,4 +25,5 @@ export function registerRoutes(app: Hono<AppEnv>): void {
   registerTodayRoutes(app);
   registerAnalyticsRoutes(app);
   registerTrainingRoutes(app);
+  registerNutritionRoutes(app);
 }

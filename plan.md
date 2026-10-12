@@ -178,6 +178,15 @@ Usuário solicitou “pode mandar continuar”. Retomar pela tarefa 5 com Claude
   - QA de navegador e persistência integrada ficam para a Tarefa 14.
 - Relatório: `.hermes/evidence/health-task6/report.md`.
 
+### Tarefa 9 — clientes e contratos frontend
+
+- Estado: **concluída, revisada e verificada independentemente pelo Hermes**. Parent repetiu frontend313/313, Worker580/580, typecheck/lint/build/diff-check; fresh Claude reviewer passed=true. Evidência RED original JUnit/JSON e cronologia aceitas explicitamente pelo parent, com stdout parcial rotulado (decisão abaixo). Próxima10; tarefas10–14 pendentes.
+- Contratos registrados antes do RED: `.hermes/evidence/health-task9/contracts.md`. Relatório: `.hermes/evidence/health-task9/report.md`.
+- Produção: `frontend/src/api/types.ts` (tipos de treino/alimentação espelhando o JSON das RPCs; resposta de exercício e create discriminados por `mode`), `frontend/src/api/training.ts` (`trainingApi`: rotinas e exercícios aninhados, `allRoutines`/`allExercises` via `fetchAllContent`) e `frontend/src/api/nutrition.ts` (`nutritionApi`, `all` via `fetchAllContent`). Transporte, erros/refresh 401 e paginação centrais reutilizados sem alteração.
+- Testes: `frontend/src/api/training.test.ts` (20) e `nutrition.test.ts` (12) com `fetch` stubado; RED assert-level (S1 corrigido 20/20, S2 12/12 `AssertionError`), GREEN alvo 32/32.
+- Gates do implementador: frontend 313/313 (281 regressão + 32 novos), typecheck e build; Worker 580/580, typecheck, lint e build dry-run.
+- Limitações: `git diff --check` e captura de stdout em arquivo foram negados na sessão Claude (equivalente: busca de whitespace final sem ocorrências; JUnit/JSON do vitest preservados). Testes usam `fetch` simulado; persistência real e UI ficam para T10–14.
+
 ### Retomada atual — Tarefa 8
 
 O proprietário solicitou continuar o projeto e autorizou explicitamente o Claude Code CLI com a conta API atual, ciente de possível consumo de créditos. O status de autenticação nesta retomada retornou `Claude API account`; isso substitui a exigência de Pro para esta continuação, sem alterar credenciais. Tarefas 1–7 preservadas. Baseline independente Hermes: Worker 501/501 e frontend 281/281, em execução serial, logs em `.hermes/evidence/health-task8/resume/`. Próxima tarefa: 8, API alimentação; seguir 9–14 somente após revisão e gates por tarefa. Commit local somente pelo parent após audit conforme `.hermes/commit-authorization.md`; sem push/deploy/provisionamento ou migration remota.
@@ -228,3 +237,10 @@ O proprietário solicitou continuar o projeto e autorizou explicitamente o Claud
   - QA navegador/persistência integrada pendente (Tarefa 14).
 - `AGENTS.md` reconciliado documentalmente: dizia "próxima tarefa 6".
 - Relatório: `.hermes/evidence/health-task7/report.md`.
+
+
+### Checkpoint supervisor atual — Tarefa9, gate de evidência bloqueado
+
+**Supersedido pela decisão do parent:** após ler fontes/testes/registros originais e repetir comandos canônicos (frontend313/313, Worker580/580, typecheck/lint/build/diff-check exit0), parent aceita explicitamente a evidência RED original JUnit/JSON completa e cronologia antes da lógica, com stdout S1 parcial/truncado. Requisito adicional de captura integral do handoff Hermes não justifica refazer trabalho verde; nenhuma assertion/aceite é alterada. Logs originais preservados, sem replay ou bytes inventados. T9 concluída; liberada10 e continuação sequencial até14. Comandos de logging negados não serão contornados; supervisor executará RED e salvará stdout diretamente quando a CLI não tiver a permissão necessária.
+
+Claude implementou T9 localmente. Hermes repetiu frontend313/313 e Worker580/580, typecheck/lint/build/diff-check exit0. Fresh Claude read-only passed=true sem blockers de código. A afirmação histórica do coder de stdout integral no transcript é substituída: S1 original/corrected possuem truncamento explícito, embora JUnit/JSON completos e cronologia RED antes lógica estejam preservados. Por exigência de logs integrais, não liberada T10. Parent decide aceitação explícita da evidência parcial stdout ou autoriza reinício escopado TDD com logging permitido; não fabricar RED/replay original nem apagar drafts. Tarefas10–14 não iniciadas. Sem quota real nova, nenhum writer desta supervisão ativo (coder/reviewer/gates exit0); HEAD cfaff0b sem stage/commit. Evidências .hermes/evidence/health-task9/hermes-verified.md e health-continuation-checkpoint.md.

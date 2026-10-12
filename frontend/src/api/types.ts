@@ -305,3 +305,84 @@ export interface ProjectFocusBreakdownResponse {
   title: string | null;
   focusedMinutes: number;
 }
+
+/** ISO weekday: 1 = Monday .. 7 = Sunday. */
+export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type TrainingExerciseMode = "REPETITIONS" | "DURATION";
+export type NutritionMeal = "BREAKFAST" | "LUNCH" | "AFTERNOON_SNACK" | "DINNER";
+
+export interface TrainingRoutineResponse {
+  id: number;
+  name: string;
+  /** Sorted and unique; an empty array means no days. */
+  weekdays: IsoWeekday[];
+  exerciseCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrainingRoutineCreateRequest {
+  name: string;
+  weekdays?: IsoWeekday[] | null;
+}
+
+/** Omitted keys keep the stored value; null weekdays clears them. */
+export interface TrainingRoutineUpdateRequest {
+  name?: string;
+  weekdays?: IsoWeekday[] | null;
+}
+
+/** The database guarantees exactly the target of the exercise mode is set. */
+export type TrainingExerciseResponse = {
+  id: number;
+  routineId: number;
+  name: string;
+  sets: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+} & (
+  | { mode: "REPETITIONS"; repetitions: number; durationSeconds: null }
+  | { mode: "DURATION"; repetitions: null; durationSeconds: number }
+);
+
+export type TrainingExerciseCreateRequest = {
+  name: string;
+  sets: number;
+  notes?: string | null;
+} & (
+  | { mode: "REPETITIONS"; repetitions: number; durationSeconds?: null }
+  | { mode: "DURATION"; durationSeconds: number; repetitions?: null }
+);
+
+/** Mode/target coherence depends on the stored exercise and is enforced by the API. */
+export interface TrainingExerciseUpdateRequest {
+  name?: string;
+  sets?: number;
+  mode?: TrainingExerciseMode;
+  repetitions?: number | null;
+  durationSeconds?: number | null;
+  notes?: string | null;
+}
+
+export interface NutritionFoodResponse {
+  id: number;
+  meal: NutritionMeal;
+  name: string;
+  quantity: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NutritionFoodCreateRequest {
+  meal: NutritionMeal;
+  name: string;
+  quantity?: string | null;
+}
+
+/** Omitted keys keep the stored value; null quantity clears it. */
+export interface NutritionFoodUpdateRequest {
+  meal?: NutritionMeal;
+  name?: string;
+  quantity?: string | null;
+}

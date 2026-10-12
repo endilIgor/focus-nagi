@@ -6,9 +6,19 @@ Leia spec.md, plan.md e .hermes/plans/2026-10-10_112705-treino-alimentacao-analy
 
 ## Papéis e execução
 
+### Exceção autorizada atual — takeover GPT/Hermes
+
+Estado mais recente: T10 concluída com3 regressões/fixes pelo parent GPT, alvo25/25 e frontend338/338, Worker580/580, typecheck/lint/build/diff0 e freshreviewGPT passed=true. Supersede checkpoint de quota e ponteiros históricos abaixo. Próxima11, seguida12–14 sequenciais. HerançaRED/diferenças de evidência preservadas. Nenhum Claudewriterativo.
+
+Após quota real do Claude na revisão T10, o usuário solicitou “continua vc mesmo até dar o limite do GPT”. Autorizada implementação e revisão por Hermes/GPT para finalizar T10 e seguir11–14 sequenciais, sem retry Claude nem mudança de credenciais. Produção principal com um escritor; revisores independentes GPT somente leitura. Commits locais parent após audit continuam autorizados, sem push/deploy/remoto/dependências novas. Preservar drafts e REDs; baseline takeover parent frontend335/335 e Worker580/580. Não há previsão confiável de cota GPT; checkpoint preventivo quando necessário. Esta exceção substitui o implementador/reviewer Claude bloqueado nesta continuação, não a preferência geral do usuário.
+
 ### Decisão atual do parent — evidência T9 aceita
 
 O parent principal auditou fontes, testes e registros originais e aceita explicitamente o RED T9 comprovado por JUnit/JSON completos e cronologia antes da lógica, com stdout S1 parcial/truncado devidamente rotulado. A exigência de stdout integral era adicional do handoff Hermes; esta decisão não enfraquece teste/aceite do usuário nem altera o registro original. Supersede o bloqueio de evidência acima: T9 concluída/revisada/verificada, parent repetiu frontend313/313 e Worker580/580, typecheck/lint/build/diff-check. Próxima T10, depois11–14 sequenciais. Preservar todos registros; sem reinício/replay/descarte de produção verde. Para novas tarefas, se logging da CLI for negado, parar o comando negado e usar supervisão Hermes para executar/capturar o RED antes de liberar produção, sem variantes de bypass.
+
+### Checkpoint atual — T10, bloqueio real de quota na revisão
+
+T9 aceita/commitada pelo parent HEAD906ce39 preservada. Claude implementou draft T10 (TrainingPage.tsx/CSS/tests); Hermes inspecionou fontes/cronologia e repetiu frontend335/335, Worker580/580, typecheck/lint/build/diff-check exit0. Fresh Claude reviewer readonly encerrou exit1 `usage_limit_reached`429 e rate_limit_info.status=rejected, sem verdict: não aprovada/liberada11. Sem retry/fallback automático, credentials/model change ou escritor ativo após encerramento. T11–14 não iniciadas. Evidências `.hermes/evidence/health-task10/hermes-verified.md`, coder/reviewer JSONL/results e hermes-gates.json. S4 T10 é regressão já verde, não RED original; S2/S3 falham por DOM ausente, não AssertionError estrito; stdout coder filtrado e dois comandos negados seguidos de variantes são desvios registrados, não escondidos. Revisão futura deve verificar races entre seleção/edição pendentes antes de liberar11. Supervisor/Claude sem stage/commit; parent exclusivo integra após audit.
 
 Claude Code CLI implementa produção; Hermes supervisiona, revisa e verifica. Login atual Claude API autorizado explicitamente pelo usuário nesta retomada (possível consumo de créditos); login Pro citado nos checkpoints antigos é histórico. Um único escritor neste checkout. Commits locais autorizados posteriormente em .hermes/commit-authorization.md, exclusivamente pelo parent principal após audit; supervisor e Claude não commitam. Sem push/deploy, provisionamento/migration remota, leitura de .env/credenciais ou dependências novas. Não inserir automaticamente conta real em migrations estruturais. Use identidades sintéticas em testes.
 

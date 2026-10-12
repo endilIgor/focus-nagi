@@ -4,6 +4,17 @@ Aplicação pessoal single-owner de foco e produtividade (pomodoro, checklist di
 diário e analytics). Os dados anteriores de tarefas, projetos, metas e notas são preservados
 no banco para não causar perda de histórico, mas essas seções não aparecem mais na interface.
 
+## Demo
+
+<p align="center">
+  <img src="docs/media/focus-nagi-demo.gif" alt="Demonstração do Focus Nagi: login, sessão de foco, checklist, diário e analytics" width="800" />
+</p>
+
+<p align="center">
+  <a href="docs/media/focus-nagi-demo.mp4">▶ Vídeo completo (1080p, ~80s)</a> — login, câmara de foco com anel de partículas,
+  checklist diária, diário e analytics. Gravado com dados de demonstração.
+</p>
+
 ## Arquitetura
 
 ```

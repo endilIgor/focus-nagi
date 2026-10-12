@@ -2,6 +2,8 @@
 
 ## Estado canônico vigente — entrega local
 
+Nova autorização explícita de release: proprietário escolheu “Autorizar publicação completa, migrations e habilitação da minha conta”. Parent GPT/Hermes pode fazer push/deploy nos projetos existentes e aplicar somente migrations novas de saúde, habilitando o UUID previamente aprovado após conferência remota. Preflight de conta/projeto, histórico, backup/restore point e read-back obrigatórios; não recriar serviços, reenviar migrations antigas, mudar credenciais ou contaminar dados pessoais com QA sintética. Uso do Claude CLI somente como ponte bounded para MCPs já autenticados é permitido nesta release, não como novo escritor de produção; quota real deve ser reportada, sem retries automáticos. Esta autorização supersede a proibição histórica de publicação abaixo para esta fase, preservando demais limites e registros.
+
 O proprietário autorizou takeover GPT/Hermes (“faz vc mesmo agora”). Tarefas 1–13 implementadas e integradas localmente; gates e QA local da T14 concluídos. T12: commit da76473, draft Claude preservado e revisão independente GPT aprovada. T13: commit 41fc5a1, rotas com guarda estrita de capacidade e navegação responsiva, revisão independente GPT aprovada.
 
 Gate canônico final: frontend 414/414; Worker `npm run check` com 580/580; typecheck, lint do Worker, builds e diff-check passaram. Chromium real com APIs/autenticação sintéticas em 1440/390/320px: CRUD, URLs negadas, teclado/toque, textos longos, reduced motion e Analytics. PGlite SQL real: 96 checks, reabertura em outro processo, rollback/cascade e produtividade inalterada.

@@ -1,5 +1,13 @@
 # Plano de implementação — Focus Nagi v3
 
+## Estado canônico vigente — Analytics e saúde publicados
+
+Após autorização explícita do proprietário, fase publicada nos três serviços existentes. Código de release 4939d458e21734030ae06bd056c421520ce43a35, com merge preservando README/vídeo remoto. Supabase: três migrations novas registradas com versões locais e fontes exatas; histórico antigo preservado, quatorze entradas finais, RLS/grants conferidos e somente conta aprovada habilitada. Backups locais reais e restauração do script transacional verificados, sem publicar dados. Drift histórico de versões antigas continua documentado: nenhum replay ou `db push` cego.
+
+Worker versão 6dda9e55-efeb-41dc-a486-42d0774c28c4, secrets/vars preservadas. Vercel produção READY, deploy dpl_9ucaMdGXEjD4V4LAHqYhfRYp2Lxj da revisão acima; https://focus-nagi.vercel.app e asset público igual ao imutável. Deploy automático confirmado diretamente no provedor, sem duplicar.
+
+Gates pós-merge frontend 414/414, Worker 580/580, typecheck/builds/lint do Worker/diff-check e CI remoto passaram. QA HTTP real e Chromium anônimo sem fixtures passaram; CRUD SQL remoto sob role autenticada foi revertido, sem persistir QA e com oito tabelas de produtividade inalteradas. Login/CRUD HTTP-JWT autenticado e sincronização entre dispositivos não exercitados: aceite final pelo proprietário, sem fornecer senha/token ao agente. Relatório versionado `.hermes/health-production-verification.md` descreve release, backup, evidências e limites; supersede apenas o estado de publicação dos checkpoints históricos abaixo. Sem tarefa de implementação pendente.
+
 ## Estado canônico vigente — Analytics e saúde entregues localmente
 
 Tarefas 1–13 implementadas e integradas; verificação local da T14 concluída, sem alegar validação de produção remota. Após quota Claude, o usuário autorizou takeover GPT/Hermes. T12 (da76473) e T13 (41fc5a1) revisadas por GPT independente e verificadas pelo parent.

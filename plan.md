@@ -1,5 +1,13 @@
 # Plano de implementação — Focus Nagi v3
 
+## Estado canônico vigente — Analytics e saúde entregues localmente
+
+Tarefas 1–13 implementadas e integradas; verificação local da T14 concluída, sem alegar validação de produção remota. Após quota Claude, o usuário autorizou takeover GPT/Hermes. T12 (da76473) e T13 (41fc5a1) revisadas por GPT independente e verificadas pelo parent.
+
+Gate canônico final: frontend 414/414 e Worker `npm run check` com 580/580; typecheck, lint do Worker, builds e diff-check passaram. QA Chromium real com APIs/autenticação simuladas em 1440/390/320px: CRUD, recarga do estado simulado, URL protegida, teclado/toque, textos longos, erro/retry, reduced motion e Analytics. PGlite real: 96 checks, 59 rejeições esperadas, reabertura em outro processo e métricas de produtividade inalteradas.
+
+Relatório: `.hermes/health-local-verification.md`, com comandos, evidências, incidentes e limites. Código e verificação local concluídos; persistência, login, sincronização remotos e habilitação administrativa real pendem de autorização/ambiente separado. Sem push, deploy, operações remotas, dependências novas ou alteração de credenciais. Evidências brutas preservadas, não versionadas; os checkpoints abaixo são históricos supersedidos, não tarefas a refazer.
+
 ## Continuação atual — autorização e fronteiras
 
 Nova autorização: proprietário pediu “faz vc mesmo agora” após quotaT12. Takeover GPT/Hermes para review12, correções se necessárias,13/14 sequenciais com TDD/gates/review e commits locais parent. Sem retryClaude/credentialschange/remoto/publicação/depsnovas. Preservar draftT12 e REDs, não repetir1–11. Próximo passo review12 e baseline independente antes liberar13; autorização supersede pausa/executorClaude históricos abaixo.
